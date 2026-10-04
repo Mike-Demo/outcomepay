@@ -4,103 +4,138 @@
 
 A buyer agent publishes a desired outcome and budget. Specialist provider agents
 bid, form a temporary team, and deliver. Independent verifier agents check the
-evidence against the contract. PayPal releases payment only after verification
-passes.
+evidence against the contract. A deterministic policy engine releases PayPal
+payment only after verification passes — with a human approval gate on every
+settlement.
 
 > "Today, people pay for products and hours. OutcomePay lets AI agents form
 > temporary businesses and get paid for verified results."
 
 PayPal AI Hackathon 2026 entry. Solo build by Mike Demopoulos. MIT licensed.
 
-## Status
+**Live demo:** https://outcomepay.view.fast/ (SpaceFast)
 
-**Phase 0 — scaffold** (2026-10-03). The command-center shell, outcome-contract
-schema, PayPal payment spine (`lib/paypal.ts`), and the fictional demo target
-are in place. The agent network (Phase 2) and verification pipeline (Phase 3)
-are not yet built — see the roadmap below.
+> **Sandbox prototype — not a legal escrow service.** All payments run on
+> PayPal's sandbox. Provider payouts are a simulated internal ledger.
 
-## The money flow (the whole idea in five steps)
+## The idea in one loop
 
-1. Buyer agent turns plain language into an **outcome contract** (`contracts/`)
-   with budget, deliverables, acceptance tests, and payment policy.
-2. Broker agent runs **structured bidding**; providers form a team under budget.
-3. PayPal order created with **intent=AUTHORIZE** — the buyer's budget
-   commitment. Buyer approves; the order is authorized (funds held).
-4. Providers deliver artifacts; **two independent verifier agents** + deterministic
-   checks score the evidence. A **policy engine** (deterministic code, never an
-   LLM) is the only thing allowed to move money.
-5. On green: human approves → PayPal **capture** → receipt with real sandbox
-   order/capture IDs + provider allocation ledger.
+1. **Buyer agent** turns plain language ("Create and validate a Spanish launch
+   kit for TidyLedger, budget $40") into a machine-readable **outcome contract**:
+   deliverables, acceptance tests, payment policy.
+2. **Broker agent** solicits structured bids from provider agents and forms the
+   cheapest covering team under budget. Losing bids stay visible with reasons.
+3. **Providers** deliver artifacts (localized copy, landing page, research,
+   independent reviews).
+4. **Verification**: deterministic checks (untranslated strings, required
+   sections, accessibility, budget) plus two independent AI evaluators must
+   reach consensus.
+5. **Human approves** the verified outcome.
+6. **Policy engine** — deterministic code, the *only* path that touches money —
+   re-verifies freshness, then authorizes and **captures** the PayPal order
+   (AUTHORIZE intent: funds are held when the team forms, released on proof).
+7. Every event is appended to a **SHA-256 hash-chained audit ledger**; anyone
+   can re-verify it via a public endpoint or offline script. No blockchain, no
+   token — just the hash chain.
 
-Sandbox prototype — not a legal escrow service.
+The golden scenario failed unscripted on its first live run (the localizer left
+`balance` untranslated; both reviewers failed it 78/100). The broker re-ran the
+provider with reviewer feedback, the fix landed, reviewers re-scored 95/100 and
+86/100, and the policy engine settled $37.00. That failure loop *is* the demo.
 
-## Quickstart
+## Run it locally
+
+Requires Node.js 20+ and Bun (or npm).
 
 ```bash
-bun install        # or npm install
-cp .env.sample .env.local   # fill in PayPal sandbox credentials
-bun dev            # command center at http://localhost:3000
-bun run build       # static export to out/
+git clone https://github.com/Mike-Demo/outcomepay.git
+cd outcomepay
+bun install          # or: npm install
+cp .env.sample .env.local   # then fill in values (never commit this file)
+bun run dev          # or: npm run dev
 ```
 
-PayPal sandbox credentials: [PayPal Developer Dashboard](https://developer.paypal.com/dashboard/)
-→ Apps & Credentials → Sandbox → Create App. You also need a sandbox buyer
-account to approve orders (same dashboard → Sandbox accounts).
+Open http://localhost:3000.
+
+### Environment variables
+
+| Variable | Required | Purpose |
+|---|---|---|
+| `PAYPAL_CLIENT_ID` / `PAYPAL_CLIENT_SECRET` | for live PayPal | PayPal sandbox REST app credentials |
+| `PAYPAL_ENVIRONMENT` | no (default `SANDBOX`) | `SANDBOX` or `LIVE` |
+| `PUBLIC_BASE_URL` | for PayPal redirects | e.g. `https://outcomepay.view.fast` |
+| `LLM_PROVIDER` | no (default `openai`) | `openai` or `anthropic` |
+| `LLM_BASE_URL` | no | any OpenAI-compatible endpoint (e.g. Groq, OpenRouter) |
+| `LLM_API_KEY` | for live providers | without it, providers serve checked-in demo artifacts labeled `cached` |
+| `LLM_MODEL` | no | defaults per provider/endpoint |
+
+Without PayPal credentials the payment panel runs its error-path harness;
+without an LLM key the agent network runs on real checked-in artifacts in
+`cached` mode. Nothing is ever faked silently — every artifact is labeled
+`live` or `cached`.
+
+## Deploy (SpaceFast)
+
+```bash
+./scripts/publish.sh <space> "message"   # builds, then sf publish
+```
+
+Set secrets on the space (values never touch disk):
+
+```bash
+printf '%s' "$PAYPAL_CLIENT_SECRET" | npx spacefast env set PAYPAL_CLIENT_SECRET --value-from-stdin --space <space> -y
+```
+
+GitHub pushes go through `./scripts/push-outcomepay.sh "message"` (API push;
+excludes build output, `node_modules`, local env files).
 
 ## Project structure
 
-```text
-app/                  Next.js command center (single-screen demo UI)
-contracts/            outcome-contract.schema.json — the machine-readable deal
-lib/
-  outcome-contract.ts contract + bid types, golden-scenario example
-functions/
-  _core/paypal.ts     PayPal spine: AUTHORIZE → authorize → capture (raw REST)
-  _core/db.ts         paypal_orders table — every state change persisted
-  api/health.ts       liveness check
-  api/paypal/         create-order · order · authorize · capture · return · cancel
-demo-target/          TidyLedger — fictional sample project the demo translates
-docs/DECISIONS.md     Phase 0 decision record (why raw REST, why fictional, …)
-scripts/publish.sh    SpaceFast publish (./scripts/publish.sh outcomepay)
+```
+app/                    Next.js 15 static-export command center
+  components/           outcome-panel, market-panel, evidence-panel,
+                        paypal-panel, settlement-panel, allocation-grid (AG Grid)
+contracts/              outcome-contract.schema.json (+ example)
+functions/              SpaceFast serverless API (shipped as the bundle)
+  _core/                paypal.ts (raw REST: AUTHORIZE→authorize→capture)
+                        agents.ts (buyer/broker/providers), checks.ts,
+                        ledger.ts (hash chain), llm.ts (OpenAI/Anthropic/
+                        OpenAI-compatible), db.ts, http.ts
+  api/paypal/           create-order, order, authorize, capture, return, cancel
+  api/agents/           outcome, bids, form-team, deliver, verify, approve,
+                        prepare-settlement, settle, receipt, ledger, ledger/verify
+demo-target/            TidyLedger — fictional CLI budgeting tool (the demo's
+                        "client project"; kept fictional per hackathon rules)
+ledger/                 exported hash-chained audit ledgers (transparency log)
+scripts/                publish.sh, export-ledger.sh, verify-ledger.py
+docs/                   DECISIONS.md, devpost-draft.md, video-script.md
 ```
 
-## Phase 1 — payment spine click-through
+## API sketch
 
-The command center's PayPal panel is a live test harness. With sandbox
-credentials configured (see below), the click-through is:
+| Endpoint | What it does |
+|---|---|
+| `POST /api/agents/outcome` | buyer agent: goal + budget → contract |
+| `POST /api/agents/bids` | broker solicits bids (selected + rejected with reasons) |
+| `POST /api/agents/form-team` | broker forms the team under budget |
+| `POST /api/agents/deliver` | run one provider (`live` or `cached`); accepts `feedback` for revision loops |
+| `POST /api/agents/verify` | deterministic checks + evaluator consensus |
+| `POST /api/agents/approve` | human approval gate |
+| `POST /api/agents/prepare-settlement` | creates the PayPal AUTHORIZE order |
+| `POST /api/agents/settle` | **policy engine**: re-verifies, authorizes, captures |
+| `GET /api/agents/receipt?outcomeId=` | full audit receipt (JSON download in the UI) |
+| `GET /api/agents/ledger/verify?outcomeId=` | public hash-chain verification |
 
-1. Enter amount → **Create order (AUTHORIZE)** → order row stored as CREATED
-2. **Approve in PayPal sandbox ↗** — log in with a sandbox *buyer* account;
-   PayPal redirects back to `/api/paypal/return`, which syncs the row to APPROVED
-3. **Authorize (hold budget)** → authorization id stored, row AUTHORIZED
-4. **Capture payment** → capture id stored, row CAPTURED
+## Key design decisions
 
-Every step shows the real PayPal IDs. In Phase 3, step 4 moves behind the
-deterministic policy engine + human approval.
-
-### Sandbox credentials
-
-Local dev: copy `.env.sample` to `.env.local` and fill in `PAYPAL_CLIENT_ID` /
-`PAYPAL_CLIENT_SECRET` from the [PayPal Developer Dashboard](https://developer.paypal.com/dashboard/)
-(Apps & Credentials → Sandbox). On SpaceFast, set them as space env vars
-(`npx -y spacefast env` — see `sf help env`) along with
-`PUBLIC_BASE_URL=https://outcomepay.view.fast` so PayPal can redirect back.
-
-## Roadmap
-
-- **Phase 0** (Oct 3–5): scaffold, PayPal sandbox account, repo — *you are here*
-- **Phase 1** (Oct 6–12): payment spine live — authorize + capture a real sandbox order end-to-end
-- **Phase 2** (Oct 13–25): agent network — buyer/broker/providers/verifiers, bidding UI
-- **Phase 3** (Oct 26–Nov 1): verification + policy-gated capture, single-screen command center
-- **Phase 4** (Nov 2–8): audit receipt, polish, Devpost draft, video script
-- **Phase 5** (Nov 9–12): <3-min video, submit (deadline Thu Nov 12, 4:00 PM CT)
-
-## What's real vs simulated
-
-- **Real:** PayPal sandbox order authorize/capture with real transaction IDs;
-  one live model step per demo run; deterministic acceptance checks.
-- **Simulated:** provider agents (until Phase 2 wires real models); provider
-  payout splits (internal ledger, labeled as such); the TidyLedger "client".
+- **Raw PayPal REST, not the Agent Toolkit**: the toolkit's `create_order`
+  hardcodes `intent: "CAPTURE"` (verified in source). OutcomePay needs
+  `AUTHORIZE` at team formation and capture only after verification.
+- **The LLM never touches money.** Bidding, delivery, and review are AI;
+  capture is deterministic policy + human approval.
+- **Honest labeling.** Every artifact says `live` or `cached`. The allocation
+  ledger is labeled a simulated internal ledger.
+- See [`docs/DECISIONS.md`](docs/DECISIONS.md) for the full record.
 
 ## License
 

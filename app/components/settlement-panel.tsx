@@ -120,6 +120,30 @@ export default function SettlementPanel({
       setChainState({ valid: data.valid, entries: data.entries.length });
     });
 
+  const downloadReceipt = async () => {
+    if (!outcomeId) return;
+    setBusy("download");
+    setError(null);
+    try {
+      const res = await fetch(`/api/agents/receipt?outcomeId=${encodeURIComponent(outcomeId)}`);
+      const data = await res.json();
+      if (!res.ok || data.ok === false) throw new Error(data.message || "Receipt download failed.");
+      const blob = new Blob([JSON.stringify(data.receipt, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `outcomepay-receipt-${outcomeId}.json`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(null);
+    }
+  };
+
   return (
     <div className="ppanel settlement">
       {error && <p className="err">{error}</p>}
@@ -172,6 +196,11 @@ export default function SettlementPanel({
       {receipt && (
         <div className="receipt">
           <h3>Settlement receipt</h3>
+          <div className="actions">
+            <button className="btn btn-sm" onClick={downloadReceipt} disabled={busy !== null}>
+              {busy === "download" ? "Preparing…" : "Download receipt (JSON)"}
+            </button>
+          </div>
           <div className="kv">
             <div><dt>PayPal order</dt><dd className="mono">{receipt.paypalOrderId}</dd></div>
             <div><dt>Authorization</dt><dd className="mono">{receipt.authorizationId}</dd></div>

@@ -133,6 +133,8 @@ export default function CommandCenter() {
       <footer className="foot">
         OutcomePay · PayPal AI Hackathon 2026 entry · MIT licensed ·{" "}
         <span className="muted">built by Mike Demopoulos (solo)</span>
+        <br />
+        <span className="muted">Sandbox prototype — not a legal escrow service.</span>
       </footer>
     </main>
   );
