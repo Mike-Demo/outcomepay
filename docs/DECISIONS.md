@@ -93,3 +93,26 @@ degrade to stateless rather than 500ing.
 - **Constraint:** Groq free tier TPM is 8K; reviewer prompts carry all prior
   artifacts (sliced to 5000 chars each) and hit 429 once — recovered after 12s.
   For the demo video, run providers with small pauses or trim reviewer context.
+
+## Phase 3 verification + policy engine (2026-10-04)
+- **Deterministic checks** (`functions/_core/checks.ts`): `no_untranslated_strings`
+  (values vs English source, case-insensitive; value==key counts as untranslated),
+  `required_sections_present` (per-kind structural rules), `accessibility_score_gte_80`
+  (rule-based: lang, title, single h1, img alt, input labels, landmarks — contrast
+  documented as out of scope), `evaluator_consensus_gte_80` (2 reviews parsed via
+  `Score: N/100 — PASS/FAIL`, both ≥ 80 and agreeing), `budget`.
+- **Policy engine** (`POST /api/agents/settle`) is the ONLY path that captures.
+  It enforces in order: (1) verification PASS fresher than every artifact
+  (re-verifies inline if stale, blocks on FAIL), (2) human approval recorded,
+  (3) PayPal order APPROVED/AUTHORIZED (authorizes if needed), (4) capture.
+- **Human gates**: `POST /api/agents/approve` (requires verification PASS);
+  `POST /api/agents/prepare-settlement` (requires verification PASS + approval)
+  creates the $37 AUTHORIZE order and the simulated allocation ledger.
+- **Feedback loop**: `deliver` accepts `feedback`; localizer/pagebuilder/researcher
+  prompts include reviewer feedback on re-runs. Verified live: `balance` miss →
+  FAIL → re-run with feedback → fixed → reviewers re-scored 95/86 → PASS.
+- Tables: `verifications`, `approvals`, `settlements`. Outcome statuses added:
+  VERIFIED, SETTLED. `capturePaypalOrder` extracted to `functions/_core/paypal.ts`.
+- UI: verification checklist + re-run-with-feedback in the evidence timeline;
+  settlement stepper (right column); 8-state pipeline is now data-driven with a
+  Reset demo button.

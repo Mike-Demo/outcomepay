@@ -1,19 +1,28 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { api, type ArtifactView, type TeamView } from "./api";
+import {
+  api,
+  type ArtifactView,
+  type TeamView,
+  type VerificationView,
+} from "./api";
 
-/** Bottom panel: run providers, collect artifacts as evidence. */
+/** Bottom panel: run providers, verify artifacts, re-run with feedback. */
 export default function EvidencePanel({
   outcomeId,
   teamTick,
+  onStateChange,
 }: {
   outcomeId: string | null;
   teamTick: number;
+  onStateChange: () => void;
 }) {
   const [team, setTeam] = useState<TeamView | null>(null);
   const [artifacts, setArtifacts] = useState<Record<string, ArtifactView[]>>({});
+  const [verification, setVerification] = useState<VerificationView | null>(null);
   const [running, setRunning] = useState<string | null>(null);
+  const [verifying, setVerifying] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const fetchTeam = useCallback(async () => {
@@ -21,7 +30,8 @@ export default function EvidencePanel({
     try {
       const data = await api<{
         team: { provider_ids: string[]; total_usd: string } | null;
-        artifacts: Array<ArtifactView & { provider_id: string }>;
+        artifacts: ArtifactView[];
+        verification: VerificationView | null;
       }>(`/api/agents/outcome?id=${encodeURIComponent(outcomeId)}`);
       if (data.team) {
         const members = data.team.provider_ids.map((id) => ({ id, role: "", capability: "", price: 0, color: "#888" }));
@@ -32,6 +42,7 @@ export default function EvidencePanel({
         (grouped[a.provider_id] ||= []).push(a);
       }
       setArtifacts(grouped);
+      setVerification(data.verification);
     } catch (e) {
       setError((e as Error).message);
     }
@@ -41,7 +52,7 @@ export default function EvidencePanel({
     void fetchTeam();
   }, [fetchTeam, teamTick]);
 
-  const runOne = async (providerId: string) => {
+  const runOne = async (providerId: string, feedback?: string) => {
     if (!outcomeId) return;
     setRunning(providerId);
     setError(null);
@@ -49,9 +60,11 @@ export default function EvidencePanel({
       const data = await api<{ artifacts: ArtifactView[]; mode: string }>("/api/agents/deliver", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ outcomeId, providerId }),
+        body: JSON.stringify({ outcomeId, providerId, feedback }),
       });
       setArtifacts((prev) => ({ ...prev, [providerId]: data.artifacts }));
+      setVerification(null); // artifacts changed → verification is stale
+      onStateChange();
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -66,6 +79,28 @@ export default function EvidencePanel({
     }
   };
 
+  const runVerification = async () => {
+    if (!outcomeId) return;
+    setVerifying(true);
+    setError(null);
+    try {
+      const data = await api<{ overall: "PASS" | "FAIL"; checks: VerificationView["checks"] }>(
+        "/api/agents/verify",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ outcomeId }),
+        }
+      );
+      setVerification({ id: "", overall: data.overall, checks: data.checks, created_at: Date.now() });
+      onStateChange();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setVerifying(false);
+    }
+  };
+
   if (!outcomeId) {
     return <p className="muted">Artifacts land here as providers deliver — each one becomes evidence for verification.</p>;
   }
@@ -74,6 +109,11 @@ export default function EvidencePanel({
   }
 
   const doneCount = team.provider_ids.filter((id) => (artifacts[id] ?? []).length > 0).length;
+  const allDone = doneCount === team.provider_ids.length;
+  const failedFeedback =
+    verification && verification.overall === "FAIL"
+      ? verification.checks.filter((c) => !c.passed).map((c) => `${c.id}: ${c.detail}`).join("\n")
+      : null;
 
   return (
     <div className="ppanel">
@@ -82,7 +122,34 @@ export default function EvidencePanel({
         <button className="btn btn-primary" onClick={runAll} disabled={running !== null}>
           {running ? `Running ${running}…` : `Run all providers (${doneCount}/${team.provider_ids.length})`}
         </button>
+        {allDone && (
+          <button className="btn" onClick={runVerification} disabled={verifying}>
+            {verifying ? "Verifying…" : "Run verification"}
+          </button>
+        )}
       </div>
+
+      {verification && (
+        <div className={`verification ${verification.overall.toLowerCase()}`}>
+          <h3>
+            Verification: <span className={`badge ${verification.overall === "PASS" ? "selected" : "rejected"}`}>{verification.overall}</span>
+          </h3>
+          <ul className="checks">
+            {verification.checks.map((c) => (
+              <li key={c.id} className={c.passed ? "pass" : "fail"}>
+                <strong>{c.passed ? "✓" : "✗"} {c.id}</strong>
+                <span className="muted"> — {c.detail}</span>
+              </li>
+            ))}
+          </ul>
+          {verification.overall === "FAIL" && (
+            <p className="muted">
+              Payment is blocked. Re-run the responsible provider below — the failed check details go back in as feedback.
+            </p>
+          )}
+        </div>
+      )}
+
       <div className="artifact-grid">
         {team.provider_ids.map((id) => {
           const arts = artifacts[id] ?? [];
@@ -95,6 +162,16 @@ export default function EvidencePanel({
                 ) : (
                   <button className="btn btn-sm" onClick={() => runOne(id)} disabled={running !== null}>
                     {running === id ? "Running…" : "Run"}
+                  </button>
+                )}
+                {failedFeedback && arts.length > 0 && (
+                  <button
+                    className="btn btn-sm"
+                    onClick={() => runOne(id, failedFeedback)}
+                    disabled={running !== null}
+                    title="Re-run with the failed check details as feedback"
+                  >
+                    {running === id ? "Re-running…" : "Re-run with feedback"}
                   </button>
                 )}
               </div>
@@ -116,7 +193,7 @@ export default function EvidencePanel({
         })}
       </div>
       <p className="muted fine">
-        Artifacts are stored server-side with their full content for the Phase 3 verifiers.
+        Artifacts are stored server-side with their full content for the verifiers.
       </p>
     </div>
   );

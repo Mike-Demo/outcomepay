@@ -3,11 +3,15 @@ import { buildContract } from "../../_core/agents";
 import {
   getDb,
   ensureAgentSchema,
+  ensurePolicySchema,
   insertOutcome,
   getOutcome,
   getBidsByOutcome,
   getTeamByOutcome,
   getArtifactsByOutcome,
+  getLatestVerification,
+  getApproval,
+  getSettlementByOutcome,
 } from "../../_core/db";
 
 /**
@@ -48,12 +52,16 @@ async function getState(request: Request, env: Record<string, unknown>) {
   const db = await getDb(env);
   if (!db) throw new InputError("no_database", "Database not configured on this space.");
   await ensureAgentSchema(db);
+  await ensurePolicySchema(db);
   const row = await getOutcome(db, id);
   if (!row) throw new InputError("not_found", "Unknown outcome id.");
-  const [bids, team, artifacts] = await Promise.all([
+  const [bids, team, artifacts, verification, approval, settlement] = await Promise.all([
     getBidsByOutcome(db, id),
     getTeamByOutcome(db, id),
     getArtifactsByOutcome(db, id),
+    getLatestVerification(db, id),
+    getApproval(db, id),
+    getSettlementByOutcome(db, id),
   ]);
   return json({
     ok: true,
@@ -84,6 +92,27 @@ async function getState(request: Request, env: Record<string, unknown>) {
       mode: a.mode,
       content: a.content,
     })),
+    verification: verification
+      ? {
+          id: verification.id,
+          overall: verification.overall,
+          checks: JSON.parse(verification.checks_json),
+          created_at: verification.created_at,
+        }
+      : null,
+    approval: approval
+      ? { id: approval.id, approver: approval.approver, created_at: approval.created_at }
+      : null,
+    settlement: settlement
+      ? {
+          id: settlement.id,
+          paypal_order_id: settlement.paypal_order_id,
+          authorization_id: settlement.authorization_id,
+          capture_id: settlement.capture_id,
+          amount_usd: settlement.amount_usd,
+          allocations: JSON.parse(settlement.allocations_json),
+        }
+      : null,
   });
 }
 

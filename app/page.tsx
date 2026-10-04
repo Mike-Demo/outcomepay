@@ -4,17 +4,19 @@
  * Single-screen layout:
  *   left   — the outcome contract + budget (buyer agent)
  *   center — the agent network (broker: bidding + team formation)
- *   right  — the PayPal transaction state
- *   bottom — the evidence timeline (provider artifacts)
+ *   right  — the PayPal transaction state + settlement (policy engine)
+ *   bottom — the evidence timeline (provider artifacts + verification)
  */
 
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import PaypalPanel from "./components/paypal-panel";
 import OutcomePanel from "./components/outcome-panel";
 import MarketPanel from "./components/market-panel";
 import EvidencePanel from "./components/evidence-panel";
+import SettlementPanel from "./components/settlement-panel";
+import { api, type OutcomeStateView } from "./components/api";
 
 const PIPELINE = [
   "Intent created",
@@ -29,7 +31,45 @@ const PIPELINE = [
 
 export default function CommandCenter() {
   const [outcomeId, setOutcomeId] = useState<string | null>(null);
-  const [teamTick, setTeamTick] = useState(0);
+  const [tick, setTick] = useState(0);
+  const [pipeline, setPipeline] = useState<boolean[]>(PIPELINE.map(() => false));
+
+  const bump = useCallback(() => setTick((t) => t + 1), []);
+
+  useEffect(() => {
+    if (!outcomeId) {
+      setPipeline(PIPELINE.map(() => false));
+      return;
+    }
+    let cancelled = false;
+    api<OutcomeStateView>(`/api/agents/outcome?id=${encodeURIComponent(outcomeId)}`)
+      .then((s) => {
+        if (cancelled) return;
+        const delivered = ["DELIVERED", "VERIFIED", "SETTLED"].includes(s.outcome.status);
+        const captured = !!s.settlement?.capture_id;
+        setPipeline([
+          true, // intent created
+          true, // budget approved (contract carries the budget)
+          !!s.team, // provider team formed
+          delivered, // artifacts delivered
+          s.verification?.overall === "PASS", // verification passed
+          !!s.approval, // human approved
+          captured, // PayPal captured
+          captured, // outcome complete
+        ]);
+      })
+      .catch(() => {
+        /* pipeline stays as-is on fetch failure */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [outcomeId, tick]);
+
+  const reset = () => {
+    setOutcomeId(null);
+    setPipeline(PIPELINE.map(() => false));
+  };
 
   return (
     <main className="shell">
@@ -42,12 +82,19 @@ export default function CommandCenter() {
             Agents don&rsquo;t buy products. They buy outcomes.
           </p>
         </div>
-        <div className="phase">Phase 2 · agent network</div>
+        <div className="topbar-right">
+          <div className="phase">Phase 3 · verification + settlement</div>
+          {outcomeId && (
+            <button className="btn btn-sm" onClick={reset} title="Start a new outcome">
+              Reset demo
+            </button>
+          )}
+        </div>
       </header>
 
       <ol className="pipeline">
         {PIPELINE.map((step, i) => (
-          <li key={step} className={`step ${i < 4 ? "done" : "pending"}`}>
+          <li key={step} className={`step ${pipeline[i] ? "done" : "pending"}`}>
             <span className="dot" />
             {step}
           </li>
@@ -57,23 +104,30 @@ export default function CommandCenter() {
       <section className="grid">
         <article className="panel">
           <h2>Outcome + budget</h2>
-          <OutcomePanel onPublished={setOutcomeId} />
+          <OutcomePanel
+            onPublished={(id) => {
+              setOutcomeId(id);
+              bump();
+            }}
+          />
         </article>
 
         <article className="panel">
           <h2>Agent network</h2>
-          <MarketPanel outcomeId={outcomeId} onTeamFormed={() => setTeamTick((t) => t + 1)} />
+          <MarketPanel outcomeId={outcomeId} onTeamFormed={bump} />
         </article>
 
         <article className="panel">
           <h2>PayPal transaction</h2>
           <PaypalPanel />
+          <h2 className="subhead">Settlement · policy engine</h2>
+          <SettlementPanel outcomeId={outcomeId} onStateChange={bump} />
         </article>
       </section>
 
       <section className="panel timeline">
         <h2>Evidence timeline</h2>
-        <EvidencePanel outcomeId={outcomeId} teamTick={teamTick} />
+        <EvidencePanel outcomeId={outcomeId} teamTick={tick} onStateChange={bump} />
       </section>
 
       <footer className="foot">

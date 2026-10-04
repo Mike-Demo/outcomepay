@@ -193,3 +193,31 @@ export async function capturePaypalAuthorization(
   if (!data?.id) throw new Error("PayPal capture response had no capture id");
   return { captureId: data.id, status: data.status, raw: data };
 }
+
+/**
+ * Policy-engine helper: capture the authorization on an AUTHORIZE-intent order.
+ * Finds the authorization on the order, then captures it. Shared by the
+ * /api/paypal/capture route and the settlement policy engine.
+ */
+function findAuthorizationId(order: any): string | null {
+  const auths = order?.purchase_units?.[0]?.payments?.authorizations;
+  if (Array.isArray(auths) && auths[0]?.id) return auths[0].id as string;
+  return null;
+}
+
+export async function capturePaypalOrder(
+  routeEnv: Record<string, unknown>,
+  paypalOrderId: string
+): Promise<{ authorizationId: string; captureId: string }> {
+  const cfg = paypalConfig(routeEnv);
+  const order = await getPaypalOrder(cfg, paypalOrderId);
+  const authorizationId = findAuthorizationId(order);
+  if (!authorizationId) {
+    throw new InputError(
+      "not_authorized",
+      "Order has no authorization to capture. Buyer must approve, then authorize, first."
+    );
+  }
+  const cap = await capturePaypalAuthorization(cfg, authorizationId);
+  return { authorizationId, captureId: cap.captureId };
+}

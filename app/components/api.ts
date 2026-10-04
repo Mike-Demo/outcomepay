@@ -57,4 +57,44 @@ export interface ArtifactView {
   title: string;
   mode: "live" | "cached";
   content: string;
+  provider_id: string;
+}
+
+export interface CheckView {
+  id: string;
+  passed: boolean;
+  detail: string;
+}
+
+export interface VerificationView {
+  id: string;
+  overall: "PASS" | "FAIL";
+  checks: CheckView[];
+  created_at: number;
+}
+
+export interface OutcomeStateView {
+  outcome: {
+    id: string;
+    goal: string;
+    budgetUsd: string;
+    contract: ContractView;
+    status: string;
+  };
+  bids: BidView[];
+  team: {
+    provider_ids: string[];
+    total_usd: string;
+  } | null;
+  artifacts: ArtifactView[];
+  verification: VerificationView | null;
+  approval: { id: string; approver: string; created_at: number } | null;
+  settlement: {
+    id: string;
+    paypal_order_id: string;
+    authorization_id: string | null;
+    capture_id: string | null;
+    amount_usd: string;
+    allocations: Array<{ provider_id: string; role: string; amount_usd: string }>;
+  } | null;
 }

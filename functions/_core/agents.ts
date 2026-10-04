@@ -21,11 +21,16 @@ export interface ProviderDef {
   blurb: string;
   /** Contract deliverables this provider can cover. */
   deliverables: string[];
-  deliverLive(cfg: LlmConfig, contract: OutcomeContract, prior: Artifact[]): Promise<Omit<Artifact, "mode">[]>;
+  deliverLive(
+    cfg: LlmConfig,
+    contract: OutcomeContract,
+    prior: Artifact[],
+    feedback?: string
+  ): Promise<Omit<Artifact, "mode">[]>;
 }
 
 /** Source strings for the TidyLedger demo target (mirror demo-target/src/ledger.py). */
-const TIDYLEDGER_STRINGS: Record<string, string> = {
+export const TIDYLEDGER_STRINGS: Record<string, string> = {
   welcome: "Welcome to TidyLedger!",
   prompt_amount: "Enter amount: ",
   prompt_note: "Enter a note: ",
@@ -75,11 +80,15 @@ export const PROVIDERS: ProviderDef[] = [
     evidenceTypes: ["artifact", "glossary_report"],
     blurb: "Human-quality es-US translation of UI strings and docs.",
     deliverables: ["translated_copy"],
-    deliverLive: async (cfg) => {
+    deliverLive: async (cfg, _contract, _prior, feedback) => {
       const data = await llmJson(
         cfg,
-        "You are a professional es-US software localizer. Translate naturally for US Spanish speakers. Keep CLI command names (add-income, add-expense, summary, quit) untranslated.",
-        `Translate these TidyLedger UI strings to es-US Spanish and produce a Spanish README. Return JSON {"strings": {key: translated}, "readme_es": "full Spanish markdown README"}.\n\nStrings:\n${JSON.stringify(TIDYLEDGER_STRINGS, null, 1)}\n\nREADME:\n${TIDYLEDGER_README}`
+        "You are a professional es-US software localizer. Translate naturally for US Spanish speakers. Keep CLI command names (add-income, add-expense, summary, quit) untranslated. Every value must actually be Spanish — never return the English source or the key itself as the translation.",
+        `Translate these TidyLedger UI strings to es-US Spanish and produce a Spanish README. Return JSON {"strings": {key: translated}, "readme_es": "full Spanish markdown README"}.\n\nStrings:\n${JSON.stringify(TIDYLEDGER_STRINGS, null, 1)}\n\nREADME:\n${TIDYLEDGER_README}${
+          feedback
+            ? `\n\nREVIEWER FEEDBACK ON YOUR PREVIOUS ATTEMPT — fix every issue listed, then re-translate fully:\n${feedback}`
+            : ""
+        }`
       );
       return [
         { kind: "translated_copy", title: "TidyLedger UI strings (es-US)", content: JSON.stringify(data.strings, null, 2) },
@@ -98,11 +107,15 @@ export const PROVIDERS: ProviderDef[] = [
     evidenceTypes: ["artifact"],
     blurb: "Generates a complete localized launch page from the product brief.",
     deliverables: ["landing_page"],
-    deliverLive: async (cfg) => {
+    deliverLive: async (cfg, _contract, _prior, feedback) => {
       const data = await llmJson(
         cfg,
         "You are a landing-page copywriter and front-end developer writing for US Spanish speakers.",
-        `Create a Spanish (es-US) launch landing page for TidyLedger, a tiny fictional command-line budgeting tool for developers. Return JSON {"html": "complete standalone HTML"}. Requirements: hero with headline + subhead + download CTA, three feature blocks, a short "how it works" section, and a footer noting TidyLedger is a fictional demo project. All copy in Spanish. Single file, inline CSS, no external assets, accessible markup (lang="es", labels, alt text).`
+        `Create a Spanish (es-US) launch landing page for TidyLedger, a tiny fictional command-line budgeting tool for developers. Return JSON {"html": "complete standalone HTML"}. Requirements: hero with headline + subhead + download CTA, three feature blocks, a short "how it works" section, and a footer noting TidyLedger is a fictional demo project. All copy in Spanish. Single file, inline CSS, no external assets, accessible markup (lang="es", labels, alt text).${
+          feedback
+            ? `\n\nREVIEWER FEEDBACK ON YOUR PREVIOUS ATTEMPT — fix every issue listed:\n${feedback}`
+            : ""
+        }`
       );
       return [{ kind: "landing_page", title: "TidyLedger launch page (es-US)", content: String(data.html) }];
     },
@@ -118,11 +131,15 @@ export const PROVIDERS: ProviderDef[] = [
     evidenceTypes: ["artifact", "sources_list"],
     blurb: "Researches where Spanish-speaking developers gather and how to reach them.",
     deliverables: ["launch_brief"],
-    deliverLive: async (cfg) => {
+    deliverLive: async (cfg, _contract, _prior, feedback) => {
       const data = await llmJson(
         cfg,
         "You are a developer-relations researcher. Be practical and specific, no hype.",
-        `Write a concise market brief (markdown) for launching TidyLedger — a tiny fictional CLI budgeting tool for developers — to Spanish-speaking developer communities in the US and Latin America. Return JSON {"brief_md": "..."}. Cover: 3-5 communities or channels with why each fits, localization pitfalls for dev tools in Spanish, and a 2-week launch checklist. Under 600 words.`
+        `Write a concise market brief (markdown) for launching TidyLedger — a tiny fictional CLI budgeting tool for developers — to Spanish-speaking developer communities in the US and Latin America. Return JSON {"brief_md": "..."}. Cover: 3-5 communities or channels with why each fits, localization pitfalls for dev tools in Spanish, and a 2-week launch checklist. Under 600 words.${
+          feedback
+            ? `\n\nREVIEWER FEEDBACK ON YOUR PREVIOUS ATTEMPT — fix every issue listed:\n${feedback}`
+            : ""
+        }`
       );
       return [{ kind: "launch_brief", title: "Launch brief: Spanish-speaking developers", content: String(data.brief_md) }];
     },

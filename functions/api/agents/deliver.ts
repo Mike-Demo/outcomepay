@@ -28,6 +28,7 @@ export const POST = withErrors(async (request: Request, env: Record<string, unkn
   }
   const outcomeId = String(body?.outcomeId ?? "").trim();
   const providerId = String(body?.providerId ?? "").trim();
+  const feedback = typeof body?.feedback === "string" && body.feedback.trim() ? body.feedback.trim().slice(0, 2000) : undefined;
   if (!outcomeId || !providerId) throw new InputError("missing_id", "Body must include outcomeId and providerId.");
 
   const def = providerById.get(providerId);
@@ -57,7 +58,7 @@ export const POST = withErrors(async (request: Request, env: Record<string, unkn
   let artifacts: Artifact[];
   try {
     const cfg = llmConfig(env);
-    const live = await def.deliverLive(cfg, contract, prior);
+    const live = await def.deliverLive(cfg, contract, prior, feedback);
     artifacts = live.map((a) => ({ ...a, mode: "live" as const }));
   } catch (err) {
     if (err instanceof LlmNotConfigured) {

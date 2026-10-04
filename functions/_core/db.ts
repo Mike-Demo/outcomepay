@@ -113,7 +113,14 @@ export async function updateOrder(
 
 /* ---------------- Agent-economy tables ---------------- */
 
-export type OutcomeStatus = "DRAFT" | "CONTRACTED" | "BIDS_IN" | "TEAM_FORMED" | "DELIVERED";
+export type OutcomeStatus =
+  | "DRAFT"
+  | "CONTRACTED"
+  | "BIDS_IN"
+  | "TEAM_FORMED"
+  | "DELIVERED"
+  | "VERIFIED"
+  | "SETTLED";
 
 export interface OutcomeRow {
   id: string;
@@ -335,6 +342,150 @@ export async function getArtifactsByOutcome(db: SpacefastDb, outcomeId: string):
     .bind(outcomeId)
     .all();
   return (r.results as unknown as ArtifactRow[]) ?? [];
+}
+
+/* ---------------- Verification / approvals / settlements ---------------- */
+
+export interface VerificationRow {
+  id: string;
+  outcome_id: string;
+  overall: "PASS" | "FAIL";
+  checks_json: string;
+  created_at: number;
+}
+
+export interface ApprovalRow {
+  id: string;
+  outcome_id: string;
+  approver: string;
+  created_at: number;
+}
+
+export interface SettlementRow {
+  id: string;
+  outcome_id: string;
+  paypal_order_id: string;
+  authorization_id: string | null;
+  capture_id: string | null;
+  amount_usd: string;
+  allocations_json: string;
+  created_at: number;
+  updated_at: number;
+}
+
+const POLICY_SCHEMA: readonly string[] = [
+  `CREATE TABLE IF NOT EXISTS verifications (
+    id VARCHAR(64) PRIMARY KEY,
+    outcome_id VARCHAR(64) NOT NULL,
+    overall VARCHAR(8) NOT NULL,
+    checks_json MEDIUMTEXT NOT NULL,
+    created_at BIGINT NOT NULL,
+    INDEX idx_verifications_outcome (outcome_id)
+  )`,
+  `CREATE TABLE IF NOT EXISTS approvals (
+    id VARCHAR(64) PRIMARY KEY,
+    outcome_id VARCHAR(64) NOT NULL,
+    approver VARCHAR(64) NOT NULL,
+    created_at BIGINT NOT NULL,
+    INDEX idx_approvals_outcome (outcome_id)
+  )`,
+  `CREATE TABLE IF NOT EXISTS settlements (
+    id VARCHAR(64) PRIMARY KEY,
+    outcome_id VARCHAR(64) NOT NULL,
+    paypal_order_id VARCHAR(64) NOT NULL,
+    authorization_id VARCHAR(64) NULL,
+    capture_id VARCHAR(64) NULL,
+    amount_usd VARCHAR(16) NOT NULL,
+    allocations_json MEDIUMTEXT NOT NULL,
+    created_at BIGINT NOT NULL,
+    updated_at BIGINT NOT NULL,
+    INDEX idx_settlements_outcome (outcome_id)
+  )`,
+];
+
+export async function ensurePolicySchema(db: SpacefastDb): Promise<void> {
+  for (const sql of POLICY_SCHEMA) {
+    await db.prepare(sql).bind().run();
+  }
+}
+
+export async function insertVerification(
+  db: SpacefastDb,
+  outcomeId: string,
+  overall: "PASS" | "FAIL",
+  checksJson: string
+): Promise<string> {
+  const id = newId("ver");
+  await db
+    .prepare(`INSERT INTO verifications (id, outcome_id, overall, checks_json, created_at) VALUES (?, ?, ?, ?, ?)`)
+    .bind(id, outcomeId, overall, checksJson, Date.now())
+    .run();
+  return id;
+}
+
+export async function getLatestVerification(db: SpacefastDb, outcomeId: string): Promise<VerificationRow | null> {
+  const r = await db
+    .prepare(`SELECT * FROM verifications WHERE outcome_id = ? ORDER BY created_at DESC LIMIT 1`)
+    .bind(outcomeId)
+    .first();
+  return (r as unknown as VerificationRow) ?? null;
+}
+
+export async function replaceApproval(db: SpacefastDb, outcomeId: string, approver: string): Promise<string> {
+  await db.prepare(`DELETE FROM approvals WHERE outcome_id = ?`).bind(outcomeId).run();
+  const id = newId("appr");
+  await db
+    .prepare(`INSERT INTO approvals (id, outcome_id, approver, created_at) VALUES (?, ?, ?, ?)`)
+    .bind(id, outcomeId, approver, Date.now())
+    .run();
+  return id;
+}
+
+export async function getApproval(db: SpacefastDb, outcomeId: string): Promise<ApprovalRow | null> {
+  const r = await db
+    .prepare(`SELECT * FROM approvals WHERE outcome_id = ? ORDER BY created_at DESC LIMIT 1`)
+    .bind(outcomeId)
+    .first();
+  return (r as unknown as ApprovalRow) ?? null;
+}
+
+export async function insertSettlement(
+  db: SpacefastDb,
+  outcomeId: string,
+  paypalOrderId: string,
+  amountUsd: string,
+  allocationsJson: string
+): Promise<string> {
+  const id = newId("stl");
+  const now = Date.now();
+  await db
+    .prepare(
+      `INSERT INTO settlements (id, outcome_id, paypal_order_id, authorization_id, capture_id, amount_usd, allocations_json, created_at, updated_at)
+       VALUES (?, ?, ?, NULL, NULL, ?, ?, ?, ?)`
+    )
+    .bind(id, outcomeId, paypalOrderId, amountUsd, allocationsJson, now, now)
+    .run();
+  return id;
+}
+
+export async function getSettlementByOutcome(db: SpacefastDb, outcomeId: string): Promise<SettlementRow | null> {
+  const r = await db
+    .prepare(`SELECT * FROM settlements WHERE outcome_id = ? ORDER BY created_at DESC LIMIT 1`)
+    .bind(outcomeId)
+    .first();
+  return (r as unknown as SettlementRow) ?? null;
+}
+
+export async function updateSettlementCapture(
+  db: SpacefastDb,
+  id: string,
+  authorizationId: string,
+  captureId: string
+): Promise<void> {
+  await db
+    .prepare(`UPDATE settlements SET authorization_id = ?, capture_id = ?, updated_at = ? WHERE id = ?`)
+    .bind(authorizationId, captureId, Date.now(), id)
+    .run();
 }
 
 /**
