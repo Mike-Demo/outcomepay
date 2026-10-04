@@ -54,3 +54,28 @@ nested. Verified live: inner keys are `DB, PAYPAL_CLIENT_ID,
 PAYPAL_CLIENT_SECRET, PAYPAL_ENVIRONMENT, PUBLIC_BASE_URL, STORAGE`.)
 `functions/_core/db.ts` `getDb()` still tolerates a missing binding, so routes
 degrade to stateless rather than 500ing.
+
+## Phase 2 agent network (2026-10-04)
+- **Buyer agent** (`buildContract`): deterministic slot parsing — goal text →
+  deliverables via keyword map ("launch kit" ⇒ landing_page + launch_brief),
+  budget from `$NN`/field/default 40, acceptance tests per deliverable.
+  Shown in the UI so parsing is inspectable, not magic.
+- **Broker** (`getBids`/`selectTeam`): deterministic — best confidence then
+  price per deliverable, budget enforced, uncovered deliverables are an error.
+  Rejected bids carry specific reasons (price, overlap, quality bar).
+- **Two-reviewer rule**: quality_report always gets two independent providers
+  (verification needs independence); other deliverables get one.
+- **LLM abstraction** (`functions/_core/llm.ts`): OpenAI + Anthropic via direct
+  REST, configured by `LLM_PROVIDER`/`LLM_API_KEY`/`LLM_MODEL` env vars.
+  Providers call `deliverLive()` when a key exists; otherwise they serve the
+  checked-in `functions/_core/cache.ts` artifacts labeled `mode:"cached"`.
+  The demo cache is real hand-authored work product (Spanish strings, README,
+  landing page, research brief, two reviews) — never silently faked.
+- **Delivery is per-provider** (`POST /api/agents/deliver`) to stay under
+  function timeouts; reviewers receive prior artifacts as context.
+- **Golden team**: localizer-01 ($12) + pagebuilder-01 ($14) + researcher-01
+  ($5) + reviewer-a/b ($3 each) = **$37 of $40**. Decoys (localizer-02,
+  pagebuilder-02, quickmt-01) bid and are visibly rejected.
+- Contract types live in `functions/_core/contracts.ts` (zero imports);
+  `lib/outcome-contract.ts` re-exports for the app. Never import `lib/` from
+  `functions/` — the publish bundle only ships `functions/`.
