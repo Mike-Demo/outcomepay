@@ -13,6 +13,8 @@ export interface LlmConfig {
   provider: LlmProvider;
   apiKey: string;
   model: string;
+  /** Base URL for OpenAI-compatible providers (Groq, OpenRouter, …). */
+  baseUrl: string;
 }
 
 export class LlmNotConfigured extends Error {
@@ -36,14 +38,22 @@ export function llmConfig(routeEnv: Record<string, unknown>): LlmConfig {
   if (provider !== "openai" && provider !== "anthropic") {
     throw new InputError("bad_llm_provider", 'LLM_PROVIDER must be "openai" or "anthropic".');
   }
-  const model =
-    envVal(routeEnv, "LLM_MODEL") ?? (provider === "anthropic" ? "claude-3-5-haiku-latest" : "gpt-4o-mini");
-  return { provider: provider as LlmProvider, apiKey, model };
+  // Any OpenAI-compatible endpoint works here: api.openai.com (default),
+  // api.groq.com/openai (free tier), openrouter.ai/api (free :free models).
+  const baseUrl =
+    envVal(routeEnv, "LLM_BASE_URL") ?? "https://api.openai.com/v1";
+  let model = envVal(routeEnv, "LLM_MODEL");
+  if (!model) {
+    if (baseUrl.includes("groq.com")) model = "llama-3.3-70b-versatile";
+    else if (baseUrl.includes("openrouter.ai")) model = "openrouter/free";
+    else model = provider === "anthropic" ? "claude-3-5-haiku-latest" : "gpt-4o-mini";
+  }
+  return { provider: provider as LlmProvider, apiKey, model, baseUrl };
 }
 
 async function llmText(cfg: LlmConfig, system: string, prompt: string): Promise<string> {
   if (cfg.provider === "openai") {
-    const res = await fetch("https://api.openai.com/v1/chat/completions", {
+    const res = await fetch(`${cfg.baseUrl}/chat/completions`, {
       method: "POST",
       headers: { Authorization: `Bearer ${cfg.apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
