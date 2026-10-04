@@ -401,6 +401,17 @@ const POLICY_SCHEMA: readonly string[] = [
     updated_at BIGINT NOT NULL,
     INDEX idx_settlements_outcome (outcome_id)
   )`,
+  `CREATE TABLE IF NOT EXISTS ledger (
+    id VARCHAR(64) PRIMARY KEY,
+    outcome_id VARCHAR(64) NOT NULL,
+    seq BIGINT NOT NULL,
+    kind VARCHAR(64) NOT NULL,
+    payload_json MEDIUMTEXT NOT NULL,
+    prev_hash VARCHAR(128) NOT NULL,
+    hash VARCHAR(128) NOT NULL,
+    created_at BIGINT NOT NULL,
+    INDEX idx_ledger_outcome (outcome_id)
+  )`,
 ];
 
 export async function ensurePolicySchema(db: SpacefastDb): Promise<void> {

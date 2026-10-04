@@ -23,6 +23,7 @@ import {
   insertOrder,
   updateOrder,
 } from "../../_core/db";
+import { appendLedger } from "../../_core/ledger";
 
 /**
  * POST /api/agents/settle — the deterministic policy engine. The ONLY path
@@ -108,6 +109,12 @@ export const POST = withErrors(async (request: Request, env: Record<string, unkn
 
   await updateSettlementCapture(db, settlement.id, captured.authorizationId, captured.captureId);
   await updateOutcomeStatus(db, outcomeId, "SETTLED");
+  const ledgerEntry = await appendLedger(db, outcomeId, "settlement.captured", {
+    paypal_order_id: settlement.paypal_order_id,
+    authorization_id: captured.authorizationId,
+    capture_id: captured.captureId,
+    amount_usd: settlement.amount_usd,
+  });
   // Mirror into the paypal_orders ledger for the Phase 1 harness.
   try {
     const existing = await db
@@ -145,6 +152,7 @@ export const POST = withErrors(async (request: Request, env: Record<string, unkn
       verification: checks.map((c) => ({ id: c.id, passed: c.passed })),
       approvedAt: new Date(approval.created_at).toISOString(),
       settledAt: new Date().toISOString(),
+      ledger: { seq: ledgerEntry.seq, hash: ledgerEntry.hash },
     },
   });
 });

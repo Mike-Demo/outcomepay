@@ -7,6 +7,7 @@ import {
   getLatestVerification,
   replaceApproval,
 } from "../../_core/db";
+import { appendLedger } from "../../_core/ledger";
 
 /**
  * POST /api/agents/approve — the human gate. Records explicit human approval
@@ -37,5 +38,9 @@ export const POST = withErrors(async (request: Request, env: Record<string, unkn
   }
   // Freshness: approval must follow the latest verification, not an older one.
   const approvalId = await replaceApproval(db, outcomeId, "human");
+  await appendLedger(db, outcomeId, "approval.recorded", {
+    approver: "human",
+    verification_id: verification.id,
+  });
   return json({ ok: true, approvalId, approvedAt: new Date().toISOString(), verificationId: verification.id });
 });

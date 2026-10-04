@@ -316,3 +316,9 @@ body {
 .receipt h4 { margin-top: 14px; }
 .mono { font-family: ui-monospace, monospace; font-size: 12px; word-break: break-all; }
 .step.done .dot { background: #22c55e; }
+
+/* ---- Ledger audit trail ---- */
+.audit-trail { margin-top: 14px; border: 1px solid var(--line); border-radius: 10px; padding: 14px; background: #0b1220; }
+.audit-trail h4 { margin: 0 0 8px; font-size: 14px; }
+.audit-trail p { font-size: 13px; }
+.chain-ok { color: #86efac; font-weight: 600; }

@@ -128,3 +128,24 @@ degrade to stateless rather than 500ing.
 - Deliberately skipped: the boilerplate's live-transactions view. PayPal's
   Transaction Search API lags hours and needs a dashboard feature flag; our own
   settlement receipt with real order/capture IDs is the stronger trust beat.
+
+## Hash-chained audit ledger (2026-10-04)
+- `functions/_core/ledger.ts`: every lifecycle event appends an entry chaining
+  the SHA-256 of the previous entry (`outcome.published → team.formed →
+  artifact.delivered → verification.completed → approval.recorded →
+  settlement.prepared → settlement.captured`). Canonical JSON (sorted keys),
+  genesis prev-hash is 64 zeros. Verified: `crypto.subtle` works in the
+  functions runtime.
+- Public endpoints: `GET /api/agents/ledger?outcomeId=` (read the chain),
+  `GET /api/agents/ledger/verify?outcomeId=` (recompute every link).
+- `POST /api/agents/ledger/backfill` is a one-time idempotent migration that
+  rebuilds a chain from existing DB records in chronological order.
+- Transparency log: `scripts/export-ledger.sh` writes `ledger/<outcomeId>.json`
+  to the public repo; `scripts/verify-ledger.py` verifies offline (independent
+  implementation — TypeScript/SubtleCrypto vs Python/hashlib agree).
+- UI: settlement receipt shows its ledger entry + an audit-trail block with a
+  Verify chain button. The video line: "We borrowed blockchain's best idea —
+  the hash chain — and left the casino behind."
+- No chain, no token, no wallet, no gas. The money stays anchored in PayPal's
+  ledger (real order/auth/capture IDs); the hash chain covers everything around
+  the money.

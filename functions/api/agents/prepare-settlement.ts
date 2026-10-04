@@ -13,6 +13,7 @@ import {
   insertSettlement,
   getSettlementByOutcome,
 } from "../../_core/db";
+import { appendLedger } from "../../_core/ledger";
 
 /**
  * POST /api/agents/prepare-settlement — create the PayPal AUTHORIZE order for
@@ -79,6 +80,11 @@ export const POST = withErrors(async (request: Request, env: Record<string, unkn
   }
 
   await insertSettlement(db, outcomeId, created.id, amountUsd, JSON.stringify(allocations));
+  await appendLedger(db, outcomeId, "settlement.prepared", {
+    paypal_order_id: created.id,
+    amount_usd: amountUsd,
+    allocations,
+  });
   return json({
     ok: true,
     paypalOrderId: created.id,

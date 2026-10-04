@@ -5,12 +5,14 @@ import type { Artifact, OutcomeContract } from "../../_core/contracts";
 import {
   getDb,
   ensureAgentSchema,
+  ensurePolicySchema,
   getOutcome,
   getTeamByOutcome,
   getArtifactsByOutcome,
   replaceArtifacts,
   updateOutcomeStatus,
 } from "../../_core/db";
+import { appendLedger } from "../../_core/ledger";
 
 /**
  * POST /api/agents/deliver — run one provider's delivery for an outcome.
@@ -37,6 +39,7 @@ export const POST = withErrors(async (request: Request, env: Record<string, unkn
   const db = await getDb(env);
   if (!db) throw new InputError("no_database", "Database not configured on this space.");
   await ensureAgentSchema(db);
+  await ensurePolicySchema(db);
   const row = await getOutcome(db, outcomeId);
   if (!row) throw new InputError("not_found", "Unknown outcome id.");
   const contract = JSON.parse(row.contract_json) as OutcomeContract;
@@ -77,6 +80,11 @@ export const POST = withErrors(async (request: Request, env: Record<string, unkn
     providerId,
     artifacts.map((a) => ({ kind: a.kind, title: a.title, content: a.content, mode: a.mode }))
   );
+  await appendLedger(db, outcomeId, "artifact.delivered", {
+    provider_id: providerId,
+    mode: artifacts[0].mode,
+    artifacts: artifacts.map((a) => ({ kind: a.kind, title: a.title })),
+  });
 
   // If every team member has delivered, the outcome is DELIVERED.
   const after = await getArtifactsByOutcome(db, outcomeId);

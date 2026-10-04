@@ -13,6 +13,7 @@ import {
   getApproval,
   getSettlementByOutcome,
 } from "../../_core/db";
+import { appendLedger, getLedger } from "../../_core/ledger";
 
 /**
  * POST /api/agents/outcome — buyer agent: goal + budget → outcome contract.
@@ -38,10 +39,17 @@ async function createOutcome(request: Request, env: Record<string, unknown>) {
   const db = await getDb(env);
   if (!db) throw new InputError("no_database", "Database not configured on this space.");
   await ensureAgentSchema(db);
+  await ensurePolicySchema(db);
   const id = await insertOutcome(db, {
     goal: contract.goal,
     budgetUsd: contract.budget.toFixed(2),
     contractJson: JSON.stringify(contract),
+  });
+  await appendLedger(db, id, "outcome.published", {
+    goal: contract.goal,
+    budget: contract.budget,
+    deliverables: contract.deliverables,
+    acceptance_tests: contract.acceptance_tests,
   });
   return json({ ok: true, outcome: { id, contract, status: "CONTRACTED" } });
 }
@@ -92,6 +100,13 @@ async function getState(request: Request, env: Record<string, unknown>) {
       mode: a.mode,
       content: a.content,
     })),
+    ledger: await (async () => {
+      const entries = await getLedger(db, id);
+      return {
+        count: entries.length,
+        head: entries.length > 0 ? entries[entries.length - 1].hash : null,
+      };
+    })(),
     verification: verification
       ? {
           id: verification.id,

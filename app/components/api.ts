@@ -97,4 +97,5 @@ export interface OutcomeStateView {
     amount_usd: string;
     allocations: Array<{ provider_id: string; role: string; amount_usd: string }>;
   } | null;
+  ledger: { count: number; head: string | null };
 }

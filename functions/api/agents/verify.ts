@@ -11,6 +11,7 @@ import {
   insertVerification,
   updateOutcomeStatus,
 } from "../../_core/db";
+import { appendLedger } from "../../_core/ledger";
 
 /**
  * POST /api/agents/verify — run deterministic checks + evaluator consensus.
@@ -45,6 +46,10 @@ export const POST = withErrors(async (request: Request, env: Record<string, unkn
   const overall = checks.every((c) => c.passed) ? "PASS" : "FAIL";
   const verificationId = await insertVerification(db, outcomeId, overall, JSON.stringify(checks));
   if (overall === "PASS") await updateOutcomeStatus(db, outcomeId, "VERIFIED");
+  await appendLedger(db, outcomeId, "verification.completed", {
+    overall,
+    checks: checks.map((c) => ({ id: c.id, passed: c.passed })),
+  });
 
   return json({ ok: true, verificationId, overall, checks });
 });

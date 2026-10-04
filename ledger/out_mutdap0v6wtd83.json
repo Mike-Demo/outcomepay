@@ -1,0 +1,234 @@
+{
+    "ok": true,
+    "outcomeId": "out_mutdap0v6wtd83",
+    "entries": [
+        {
+            "seq": 0,
+            "kind": "outcome.published",
+            "payload": {
+                "goal": "Create and validate a Spanish launch kit for the TidyLedger open-source project.",
+                "budget": 40,
+                "deliverables": [
+                    "translated_copy",
+                    "landing_page",
+                    "launch_brief",
+                    "quality_report"
+                ],
+                "acceptance_tests": [
+                    "no_untranslated_strings",
+                    "required_sections_present",
+                    "accessibility_score_gte_80",
+                    "evaluator_consensus_gte_80"
+                ]
+            },
+            "prev_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+            "hash": "aa61d7a06dd12348396c9163182dd6861e97cd984dbfc6945f58d48a36b479bd",
+            "created_at": 1791127719085
+        },
+        {
+            "seq": 1,
+            "kind": "team.formed",
+            "payload": {
+                "provider_ids": [
+                    "localizer-01",
+                    "pagebuilder-01",
+                    "researcher-01",
+                    "reviewer-a",
+                    "reviewer-b"
+                ],
+                "total_usd": "37.00",
+                "budget_usd": "40.00",
+                "rejected": [
+                    "pagebuilder-02",
+                    "localizer-02",
+                    "quickmt-01"
+                ]
+            },
+            "prev_hash": "aa61d7a06dd12348396c9163182dd6861e97cd984dbfc6945f58d48a36b479bd",
+            "hash": "3ac3aa141d3fe94ddaf03d9a41ee02700f5832bafa9a2fa9245179ce74134f8a",
+            "created_at": 1791127719458
+        },
+        {
+            "seq": 2,
+            "kind": "artifact.delivered",
+            "payload": {
+                "provider_id": "researcher-01",
+                "mode": "live",
+                "artifacts": [
+                    {
+                        "kind": "launch_brief",
+                        "title": "Launch brief: Spanish-speaking developers"
+                    }
+                ]
+            },
+            "prev_hash": "3ac3aa141d3fe94ddaf03d9a41ee02700f5832bafa9a2fa9245179ce74134f8a",
+            "hash": "989f9b3755e4e6734f0ed738aeb70c9a8ab2dabf4269ff1e2b6ee49576ef2435",
+            "created_at": 1791127719788
+        },
+        {
+            "seq": 3,
+            "kind": "artifact.delivered",
+            "payload": {
+                "provider_id": "pagebuilder-01",
+                "mode": "live",
+                "artifacts": [
+                    {
+                        "kind": "landing_page",
+                        "title": "TidyLedger launch page (es-US)"
+                    }
+                ]
+            },
+            "prev_hash": "989f9b3755e4e6734f0ed738aeb70c9a8ab2dabf4269ff1e2b6ee49576ef2435",
+            "hash": "f8687299005637781d9afc3f48fa1395722103ddb360af6946a8b3d68aa4aa46",
+            "created_at": 1791127719959
+        },
+        {
+            "seq": 4,
+            "kind": "artifact.delivered",
+            "payload": {
+                "provider_id": "localizer-01",
+                "mode": "live",
+                "artifacts": [
+                    {
+                        "kind": "translated_copy",
+                        "title": "TidyLedger UI strings (es-US)"
+                    },
+                    {
+                        "kind": "translated_copy",
+                        "title": "TidyLedger README (es-US)"
+                    }
+                ]
+            },
+            "prev_hash": "f8687299005637781d9afc3f48fa1395722103ddb360af6946a8b3d68aa4aa46",
+            "hash": "c0ca93dde9d06928db19332235aa72c39683dac121de63e5fa57c5942339c08c",
+            "created_at": 1791127720151
+        },
+        {
+            "seq": 5,
+            "kind": "artifact.delivered",
+            "payload": {
+                "provider_id": "reviewer-a",
+                "mode": "live",
+                "artifacts": [
+                    {
+                        "kind": "quality_report",
+                        "title": "Quality review A \u2014 localization QA"
+                    }
+                ]
+            },
+            "prev_hash": "c0ca93dde9d06928db19332235aa72c39683dac121de63e5fa57c5942339c08c",
+            "hash": "382cf30b167bbe7529a4a4c79812dc9899afafc3d747af0eb31d857f24ec755a",
+            "created_at": 1791127720329
+        },
+        {
+            "seq": 6,
+            "kind": "artifact.delivered",
+            "payload": {
+                "provider_id": "reviewer-b",
+                "mode": "live",
+                "artifacts": [
+                    {
+                        "kind": "quality_report",
+                        "title": "Quality review B \u2014 launch readiness"
+                    }
+                ]
+            },
+            "prev_hash": "382cf30b167bbe7529a4a4c79812dc9899afafc3d747af0eb31d857f24ec755a",
+            "hash": "fad90ace84d4115e5141e055ee77391f05ef294ae7f231ae515b8fa8e3b6a2ae",
+            "created_at": 1791127720506
+        },
+        {
+            "seq": 7,
+            "kind": "verification.completed",
+            "payload": {
+                "overall": "PASS",
+                "checks": [
+                    {
+                        "id": "no_untranslated_strings",
+                        "passed": true
+                    },
+                    {
+                        "id": "required_sections_present",
+                        "passed": true
+                    },
+                    {
+                        "id": "accessibility_score_gte_80",
+                        "passed": true
+                    },
+                    {
+                        "id": "evaluator_consensus_gte_80",
+                        "passed": true
+                    },
+                    {
+                        "id": "budget",
+                        "passed": true
+                    }
+                ]
+            },
+            "prev_hash": "fad90ace84d4115e5141e055ee77391f05ef294ae7f231ae515b8fa8e3b6a2ae",
+            "hash": "9bcbfa77bd37efe0d2f401db11172f1282035e56041ccea31b01e03a76a1dade",
+            "created_at": 1791127720776
+        },
+        {
+            "seq": 8,
+            "kind": "approval.recorded",
+            "payload": {
+                "approver": "human"
+            },
+            "prev_hash": "9bcbfa77bd37efe0d2f401db11172f1282035e56041ccea31b01e03a76a1dade",
+            "hash": "dcf8af2163f2e3b3a8d4b55e31b2a6ce37a6c45cb65b651fa42fc863adfe49df",
+            "created_at": 1791127721052
+        },
+        {
+            "seq": 9,
+            "kind": "settlement.prepared",
+            "payload": {
+                "paypal_order_id": "31N00531JG602881N",
+                "amount_usd": "37.00",
+                "allocations": [
+                    {
+                        "provider_id": "localizer-01",
+                        "role": "Localization specialist",
+                        "amount_usd": "12.00"
+                    },
+                    {
+                        "provider_id": "pagebuilder-01",
+                        "role": "Landing page builder",
+                        "amount_usd": "14.00"
+                    },
+                    {
+                        "provider_id": "researcher-01",
+                        "role": "Market researcher",
+                        "amount_usd": "5.00"
+                    },
+                    {
+                        "provider_id": "reviewer-a",
+                        "role": "Quality reviewer A",
+                        "amount_usd": "3.00"
+                    },
+                    {
+                        "provider_id": "reviewer-b",
+                        "role": "Quality reviewer B",
+                        "amount_usd": "3.00"
+                    }
+                ]
+            },
+            "prev_hash": "dcf8af2163f2e3b3a8d4b55e31b2a6ce37a6c45cb65b651fa42fc863adfe49df",
+            "hash": "f9371f1248282aa336ce51d618c7d1984a50e952df618af32292b3c861c99d26",
+            "created_at": 1791127721424
+        },
+        {
+            "seq": 10,
+            "kind": "settlement.captured",
+            "payload": {
+                "paypal_order_id": "31N00531JG602881N",
+                "authorization_id": "1CK27904BB406813X",
+                "capture_id": "2F873039T8500230V",
+                "amount_usd": "37.00"
+            },
+            "prev_hash": "f9371f1248282aa336ce51d618c7d1984a50e952df618af32292b3c861c99d26",
+            "hash": "e511023de41e4a7b0cb224e139a9780dabe50af035bd0520827fee3f2e5ab3c2",
+            "created_at": 1791127721599
+        }
+    ]
+}

@@ -4,11 +4,13 @@ import type { OutcomeContract, ProviderBid } from "../../_core/contracts";
 import {
   getDb,
   ensureAgentSchema,
+  ensurePolicySchema,
   getOutcome,
   getBidsByOutcome,
   insertTeam,
   updateOutcomeStatus,
 } from "../../_core/db";
+import { appendLedger } from "../../_core/ledger";
 
 /**
  * POST /api/agents/form-team — broker forms the provider team.
@@ -29,6 +31,7 @@ export const POST = withErrors(async (request: Request, env: Record<string, unkn
   const db = await getDb(env);
   if (!db) throw new InputError("no_database", "Database not configured on this space.");
   await ensureAgentSchema(db);
+  await ensurePolicySchema(db);
   const row = await getOutcome(db, outcomeId);
   if (!row) throw new InputError("not_found", "Unknown outcome id.");
   const contract = JSON.parse(row.contract_json) as OutcomeContract;
@@ -62,6 +65,12 @@ export const POST = withErrors(async (request: Request, env: Record<string, unkn
 
   const teamId = await insertTeam(db, outcomeId, selection.provider_ids, selection.total);
   await updateOutcomeStatus(db, outcomeId, "TEAM_FORMED");
+  await appendLedger(db, outcomeId, "team.formed", {
+    provider_ids: selection.provider_ids,
+    total_usd: selection.total.toFixed(2),
+    budget_usd: contract.budget.toFixed(2),
+    rejected: selection.rejected.map((r) => r.provider_id),
+  });
   return json({
     ok: true,
     team: {

@@ -21,6 +21,7 @@ export default function SettlementPanel({
   const [error, setError] = useState<string | null>(null);
   const [approveUrl, setApproveUrl] = useState<string | null>(null);
   const [receipt, setReceipt] = useState<any | null>(null);
+  const [chainState, setChainState] = useState<{ valid: boolean; entries: number } | null>(null);
 
   const fetchState = useCallback(async () => {
     if (!outcomeId) {
@@ -110,6 +111,15 @@ export default function SettlementPanel({
       setApproveUrl(null);
     });
 
+  const verifyChain = () =>
+    outcomeId &&
+    run("verify", async () => {
+      const data = await api<{ valid: boolean; entries: unknown[] }>(
+        `/api/agents/ledger/verify?outcomeId=${encodeURIComponent(outcomeId)}`
+      );
+      setChainState({ valid: data.valid, entries: data.entries.length });
+    });
+
   return (
     <div className="ppanel settlement">
       {error && <p className="err">{error}</p>}
@@ -167,6 +177,9 @@ export default function SettlementPanel({
             <div><dt>Authorization</dt><dd className="mono">{receipt.authorizationId}</dd></div>
             <div><dt>Capture</dt><dd className="mono">{receipt.captureId}</dd></div>
             <div><dt>Amount</dt><dd>${Number(receipt.amountUsd).toFixed(2)}</dd></div>
+            {receipt.ledger && (
+              <div><dt>Ledger entry</dt><dd className="mono">#{receipt.ledger.seq} · {String(receipt.ledger.hash).slice(0, 16)}…</dd></div>
+            )}
           </div>
           {receipt.allocations && (
             <>
@@ -175,6 +188,29 @@ export default function SettlementPanel({
               <p className="muted fine">Simulated internal ledger — not a PayPal payout.</p>
             </>
           )}
+        </div>
+      )}
+
+      {state?.ledger && state.ledger.count > 0 && (
+        <div className="audit-trail">
+          <h4>Audit trail — hash-chained, tamper-evident</h4>
+          <p className="muted">
+            {state.ledger.count} entries · head <span className="mono">{String(state.ledger.head).slice(0, 16)}…</span>
+          </p>
+          <button className="btn btn-sm" onClick={verifyChain} disabled={busy !== null}>
+            {busy === "verify" ? "Verifying…" : "Verify chain"}
+          </button>
+          {chainState && (
+            <p className={chainState.valid ? "chain-ok" : "err"}>
+              {chainState.valid
+                ? `✓ Chain intact — ${chainState.entries} entries re-hashed and linked.`
+                : "✗ Chain BROKEN — a record was altered."}
+            </p>
+          )}
+          <p className="muted fine">
+            Every event hashes the one before it. Public endpoint:{" "}
+            <span className="mono">/api/agents/ledger/verify?outcomeId={outcomeId}</span>
+          </p>
         </div>
       )}
       {!receipt && (
