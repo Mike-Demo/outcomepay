@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { api, type OutcomeStateView } from "./api";
+import AllocationGrid from "./allocation-grid";
 
 /**
  * Right-column: the settlement flow.
@@ -170,14 +171,7 @@ export default function SettlementPanel({
           {receipt.allocations && (
             <>
               <h4>Provider allocations</h4>
-              <ul className="agents">
-                {receipt.allocations.map((a: { provider_id: string; role: string; amount_usd: string }) => (
-                  <li key={a.provider_id}>
-                    <strong>{a.provider_id}</strong>
-                    <span className="muted"> — {a.role} · ${Number(a.amount_usd).toFixed(2)}</span>
-                  </li>
-                ))}
-              </ul>
+              <AllocationGrid allocations={receipt.allocations} />
               <p className="muted fine">Simulated internal ledger — not a PayPal payout.</p>
             </>
           )}

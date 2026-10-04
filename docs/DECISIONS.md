@@ -116,3 +116,15 @@ degrade to stateless rather than 500ing.
 - UI: verification checklist + re-run-with-feedback in the evidence timeline;
   settlement stepper (right column); 8-state pipeline is now data-driven with a
   Reset demo button.
+
+## AG Grid sponsor surface (2026-10-04)
+- AG Grid is a named hackathon sponsor with its own prize pool. The paypaldev
+  `hackathon-paypal-ag-grid-boilerplate` is a Next.js server-component app —
+  architecturally incompatible with our static-export SpaceFast setup, so we did
+  NOT merge it. Instead we use AG Grid's React grid (community, MIT) surgically:
+  `app/components/allocation-grid.tsx` renders the settlement receipt's provider
+  allocation ledger as a sortable, filterable grid with a pinned total row
+  (dark Quartz theme via the v36 Theming API — no CSS imports needed).
+- Deliberately skipped: the boilerplate's live-transactions view. PayPal's
+  Transaction Search API lags hours and needs a dashboard feature flag; our own
+  settlement receipt with real order/capture IDs is the stronger trust beat.
