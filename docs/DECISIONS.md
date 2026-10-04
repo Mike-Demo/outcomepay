@@ -45,10 +45,12 @@ under `functions/api/*`, published with `scripts/publish.sh --space outcomepay`
 (the proven pattern from zaks-ai-gallery). Space `outcomepay` created 2026-10-03,
 live at https://outcomepay.view.fast/.
 
-## Database: best-effort for now (2026-10-03)
-The new space does not inject `env.DB` into functions despite `runtime.database`
-being true and the identical pattern working on older spaces (two publishes
-didn't fix it). All `/api/paypal/*` routes therefore treat the DB as
-best-effort (`getDb()` returns null → stateless; the UI carries the PayPal IDs
-in React state). The `paypal_orders` schema is ready for when the binding
-appears. Revisit before Phase 4 (the audit receipt needs persistence).
+## Runtime env shape (2026-10-04 — the actual root cause)
+The functions runtime invokes handlers as `(request, { ctx, env, params })` —
+the real bindings live one level down under `env.env`. `withErrors` unwraps
+this so every route sees `{ DB, PAYPAL_CLIENT_ID, … }` directly. (An earlier
+"missing DB binding" theory was wrong: `DB` was present all along, just
+nested. Verified live: inner keys are `DB, PAYPAL_CLIENT_ID,
+PAYPAL_CLIENT_SECRET, PAYPAL_ENVIRONMENT, PUBLIC_BASE_URL, STORAGE`.)
+`functions/_core/db.ts` `getDb()` still tolerates a missing binding, so routes
+degrade to stateless rather than 500ing.
