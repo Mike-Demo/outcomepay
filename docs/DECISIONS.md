@@ -79,3 +79,17 @@ degrade to stateless rather than 500ing.
 - Contract types live in `functions/_core/contracts.ts` (zero imports);
   `lib/outcome-contract.ts` re-exports for the app. Never import `lib/` from
   `functions/` — the publish bundle only ships `functions/`.
+
+## Live LLM via Groq free tier (2026-10-04)
+- `LLM_BASE_URL` added to `llm.ts`: any OpenAI-compatible endpoint works.
+  Space env: `LLM_PROVIDER=openai`, `LLM_BASE_URL=https://api.groq.com/openai/v1`,
+  `LLM_MODEL=openai/gpt-oss-120b`, `LLM_API_KEY` (Groq key, via stdin).
+- Default model per base URL: groq → `openai/gpt-oss-120b` (verified against
+  Groq's live `/models` — `llama-3.3-70b-versatile` no longer exists there),
+  openrouter → `openrouter/free`, else gpt-4o-mini / claude-3-5-haiku-latest.
+- **Unscripted win:** first live run's localizer left `balance` untranslated;
+  both independent reviewers caught it (78/100 FAIL, consensus, same fix
+  suggested). This is the Phase 3 controlled-failure demo beat writing itself.
+- **Constraint:** Groq free tier TPM is 8K; reviewer prompts carry all prior
+  artifacts (sliced to 5000 chars each) and hit 429 once — recovered after 12s.
+  For the demo video, run providers with small pauses or trim reviewer context.
