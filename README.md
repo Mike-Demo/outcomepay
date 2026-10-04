@@ -53,13 +53,38 @@ account to approve orders (same dashboard → Sandbox accounts).
 app/                  Next.js command center (single-screen demo UI)
 contracts/            outcome-contract.schema.json — the machine-readable deal
 lib/
-  paypal.ts           PayPal spine: AUTHORIZE → authorize → capture (raw REST)
   outcome-contract.ts contract + bid types, golden-scenario example
-functions/api/        SpaceFast serverless functions (health, later: spine endpoints)
+functions/
+  _core/paypal.ts     PayPal spine: AUTHORIZE → authorize → capture (raw REST)
+  _core/db.ts         paypal_orders table — every state change persisted
+  api/health.ts       liveness check
+  api/paypal/         create-order · order · authorize · capture · return · cancel
 demo-target/          TidyLedger — fictional sample project the demo translates
 docs/DECISIONS.md     Phase 0 decision record (why raw REST, why fictional, …)
 scripts/publish.sh    SpaceFast publish (./scripts/publish.sh outcomepay)
 ```
+
+## Phase 1 — payment spine click-through
+
+The command center's PayPal panel is a live test harness. With sandbox
+credentials configured (see below), the click-through is:
+
+1. Enter amount → **Create order (AUTHORIZE)** → order row stored as CREATED
+2. **Approve in PayPal sandbox ↗** — log in with a sandbox *buyer* account;
+   PayPal redirects back to `/api/paypal/return`, which syncs the row to APPROVED
+3. **Authorize (hold budget)** → authorization id stored, row AUTHORIZED
+4. **Capture payment** → capture id stored, row CAPTURED
+
+Every step shows the real PayPal IDs. In Phase 3, step 4 moves behind the
+deterministic policy engine + human approval.
+
+### Sandbox credentials
+
+Local dev: copy `.env.sample` to `.env.local` and fill in `PAYPAL_CLIENT_ID` /
+`PAYPAL_CLIENT_SECRET` from the [PayPal Developer Dashboard](https://developer.paypal.com/dashboard/)
+(Apps & Credentials → Sandbox). On SpaceFast, set them as space env vars
+(`npx -y spacefast env` — see `sf help env`) along with
+`PUBLIC_BASE_URL=https://outcomepay.view.fast` so PayPal can redirect back.
 
 ## Roadmap
 

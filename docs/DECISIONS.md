@@ -17,9 +17,11 @@ third-party trademarks without permission, and a self-contained target lets
 judges rerun the whole loop.
 
 ## Payment integration: raw REST, not the Agent Toolkit
-`lib/paypal.ts` uses the PayPal Orders REST API directly with
-`intent: "AUTHORIZE"` → buyer approval → `authorizeOrder()` →
-policy-gated `captureAuthorization()`.
+`functions/_core/paypal.ts` uses the PayPal Orders REST API directly with
+`intent: "AUTHORIZE"` → buyer approval → `authorizePaypalOrder()` →
+policy-gated `capturePaypalAuthorization()`. (The spine lives server-side under
+`functions/` because the Next.js app is a static export — the UI only ever
+talks to it over HTTP.)
 
 Rationale: the official `@paypal/agent-toolkit`'s `create_order` hardcodes
 `intent: "CAPTURE"` (verified in `typescript/src/shared/payloadUtils.ts`,

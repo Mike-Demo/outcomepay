@@ -11,6 +11,8 @@
  * Phase 2 (agent network) and Phase 3 (verification) land.
  */
 
+import PaypalPanel from "./components/paypal-panel";
+
 const PIPELINE = [
   "Intent created",
   "Budget approved",
@@ -86,26 +88,7 @@ export default function CommandCenter() {
 
         <article className="panel">
           <h2>PayPal transaction</h2>
-          <dl className="kv">
-            <div>
-              <dt>Order ID</dt>
-              <dd className="muted">—</dd>
-            </div>
-            <div>
-              <dt>State</dt>
-              <dd className="muted">not started</dd>
-            </div>
-            <div>
-              <dt>Flow</dt>
-              <dd>
-                AUTHORIZE on team formation → capture after verification
-              </dd>
-            </div>
-          </dl>
-          <p className="muted">
-            The payment spine lands in Phase 1. Sandbox only — not a legal
-            escrow service.
-          </p>
+          <PaypalPanel />
         </article>
       </section>
 
