@@ -111,6 +111,232 @@ export async function updateOrder(
   await db.prepare(`UPDATE paypal_orders SET ${sets.join(", ")} WHERE paypal_order_id = ?`).bind(...vals).run();
 }
 
+/* ---------------- Agent-economy tables ---------------- */
+
+export type OutcomeStatus = "DRAFT" | "CONTRACTED" | "BIDS_IN" | "TEAM_FORMED" | "DELIVERED";
+
+export interface OutcomeRow {
+  id: string;
+  goal: string;
+  budget_usd: string;
+  contract_json: string;
+  status: OutcomeStatus;
+  created_at: number;
+  updated_at: number;
+}
+
+export interface BidRow {
+  id: string;
+  outcome_id: string;
+  provider_id: string;
+  capability: string;
+  price_usd: string;
+  confidence: number;
+  evidence_types: string;
+  decision: string;
+  decision_reason: string | null;
+  created_at: number;
+}
+
+export interface TeamRow {
+  id: string;
+  outcome_id: string;
+  provider_ids: string;
+  total_usd: string;
+  created_at: number;
+}
+
+export interface ArtifactRow {
+  id: string;
+  outcome_id: string;
+  provider_id: string;
+  kind: string;
+  title: string;
+  content: string;
+  mode: string;
+  created_at: number;
+}
+
+const AGENT_SCHEMA: readonly string[] = [
+  `CREATE TABLE IF NOT EXISTS outcomes (
+    id VARCHAR(64) PRIMARY KEY,
+    goal TEXT NOT NULL,
+    budget_usd VARCHAR(16) NOT NULL,
+    contract_json MEDIUMTEXT NOT NULL,
+    status VARCHAR(32) NOT NULL,
+    created_at BIGINT NOT NULL,
+    updated_at BIGINT NOT NULL,
+    INDEX idx_outcomes_status (status)
+  )`,
+  `CREATE TABLE IF NOT EXISTS bids (
+    id VARCHAR(64) PRIMARY KEY,
+    outcome_id VARCHAR(64) NOT NULL,
+    provider_id VARCHAR(64) NOT NULL,
+    capability VARCHAR(128) NOT NULL,
+    price_usd VARCHAR(16) NOT NULL,
+    confidence DOUBLE NOT NULL,
+    evidence_types TEXT NOT NULL,
+    decision VARCHAR(16) NOT NULL,
+    decision_reason TEXT NULL,
+    created_at BIGINT NOT NULL,
+    INDEX idx_bids_outcome (outcome_id)
+  )`,
+  `CREATE TABLE IF NOT EXISTS teams (
+    id VARCHAR(64) PRIMARY KEY,
+    outcome_id VARCHAR(64) NOT NULL,
+    provider_ids TEXT NOT NULL,
+    total_usd VARCHAR(16) NOT NULL,
+    created_at BIGINT NOT NULL,
+    INDEX idx_teams_outcome (outcome_id)
+  )`,
+  `CREATE TABLE IF NOT EXISTS artifacts (
+    id VARCHAR(64) PRIMARY KEY,
+    outcome_id VARCHAR(64) NOT NULL,
+    provider_id VARCHAR(64) NOT NULL,
+    kind VARCHAR(64) NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    content MEDIUMTEXT NOT NULL,
+    mode VARCHAR(16) NOT NULL,
+    created_at BIGINT NOT NULL,
+    INDEX idx_artifacts_outcome (outcome_id)
+  )`,
+];
+
+export async function ensureAgentSchema(db: SpacefastDb): Promise<void> {
+  for (const sql of AGENT_SCHEMA) {
+    await db.prepare(sql).bind().run();
+  }
+}
+
+export function newId(prefix: string): string {
+  return `${prefix}_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+}
+
+export async function insertOutcome(
+  db: SpacefastDb,
+  o: { goal: string; budgetUsd: string; contractJson: string }
+): Promise<string> {
+  const id = newId("out");
+  const now = Date.now();
+  await db
+    .prepare(
+      `INSERT INTO outcomes (id, goal, budget_usd, contract_json, status, created_at, updated_at)
+       VALUES (?, ?, ?, ?, 'CONTRACTED', ?, ?)`
+    )
+    .bind(id, o.goal, o.budgetUsd, o.contractJson, now, now)
+    .run();
+  return id;
+}
+
+export async function getOutcome(db: SpacefastDb, id: string): Promise<OutcomeRow | null> {
+  const r = await db.prepare(`SELECT * FROM outcomes WHERE id = ? LIMIT 1`).bind(id).first();
+  return (r as unknown as OutcomeRow) ?? null;
+}
+
+export async function updateOutcomeStatus(db: SpacefastDb, id: string, status: OutcomeStatus): Promise<void> {
+  await db
+    .prepare(`UPDATE outcomes SET status = ?, updated_at = ? WHERE id = ?`)
+    .bind(status, Date.now(), id)
+    .run();
+}
+
+export async function replaceBids(
+  db: SpacefastDb,
+  outcomeId: string,
+  bids: Array<{
+    provider_id: string;
+    capability: string;
+    price: number;
+    confidence: number;
+    evidence_types: string[];
+    decision: string;
+    decision_reason: string | null;
+  }>
+): Promise<void> {
+  await db.prepare(`DELETE FROM bids WHERE outcome_id = ?`).bind(outcomeId).run();
+  const now = Date.now();
+  for (const b of bids) {
+    await db
+      .prepare(
+        `INSERT INTO bids (id, outcome_id, provider_id, capability, price_usd, confidence, evidence_types, decision, decision_reason, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      )
+      .bind(
+        newId("bid"),
+        outcomeId,
+        b.provider_id,
+        b.capability,
+        b.price.toFixed(2),
+        b.confidence,
+        JSON.stringify(b.evidence_types),
+        b.decision,
+        b.decision_reason,
+        now
+      )
+      .run();
+  }
+}
+
+export async function getBidsByOutcome(db: SpacefastDb, outcomeId: string): Promise<BidRow[]> {
+  const r = await db
+    .prepare(`SELECT * FROM bids WHERE outcome_id = ? ORDER BY confidence DESC`)
+    .bind(outcomeId)
+    .all();
+  return (r.results as unknown as BidRow[]) ?? [];
+}
+
+export async function insertTeam(
+  db: SpacefastDb,
+  outcomeId: string,
+  providerIds: string[],
+  totalUsd: number
+): Promise<string> {
+  const id = newId("team");
+  await db
+    .prepare(`INSERT INTO teams (id, outcome_id, provider_ids, total_usd, created_at) VALUES (?, ?, ?, ?, ?)`)
+    .bind(id, outcomeId, JSON.stringify(providerIds), totalUsd.toFixed(2), Date.now())
+    .run();
+  return id;
+}
+
+export async function getTeamByOutcome(db: SpacefastDb, outcomeId: string): Promise<TeamRow | null> {
+  const r = await db
+    .prepare(`SELECT * FROM teams WHERE outcome_id = ? ORDER BY created_at DESC LIMIT 1`)
+    .bind(outcomeId)
+    .first();
+  return (r as unknown as TeamRow) ?? null;
+}
+
+export async function replaceArtifacts(
+  db: SpacefastDb,
+  outcomeId: string,
+  providerId: string,
+  artifacts: Array<{ kind: string; title: string; content: string; mode: string }>
+): Promise<void> {
+  await db
+    .prepare(`DELETE FROM artifacts WHERE outcome_id = ? AND provider_id = ?`)
+    .bind(outcomeId, providerId)
+    .run();
+  const now = Date.now();
+  for (const a of artifacts) {
+    await db
+      .prepare(
+        `INSERT INTO artifacts (id, outcome_id, provider_id, kind, title, content, mode, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+      )
+      .bind(newId("art"), outcomeId, providerId, a.kind, a.title, a.content, a.mode, now)
+      .run();
+  }
+}
+
+export async function getArtifactsByOutcome(db: SpacefastDb, outcomeId: string): Promise<ArtifactRow[]> {
+  const r = await db
+    .prepare(`SELECT * FROM artifacts WHERE outcome_id = ? ORDER BY created_at ASC`)
+    .bind(outcomeId)
+    .all();
+  return (r.results as unknown as ArtifactRow[]) ?? [];
+}
+
 /**
  * Best-effort database handle. Returns null when the space has no DB binding
  * (e.g. provisioning lag on a new space) so the API can run stateless —
