@@ -44,7 +44,7 @@ export function llmConfig(routeEnv: Record<string, unknown>): LlmConfig {
     envVal(routeEnv, "LLM_BASE_URL") ?? "https://api.openai.com/v1";
   let model = envVal(routeEnv, "LLM_MODEL");
   if (!model) {
-    if (baseUrl.includes("groq.com")) model = "llama-3.3-70b-versatile";
+    if (baseUrl.includes("groq.com")) model = "openai/gpt-oss-120b";
     else if (baseUrl.includes("openrouter.ai")) model = "openrouter/free";
     else model = provider === "anthropic" ? "claude-3-5-haiku-latest" : "gpt-4o-mini";
   }
