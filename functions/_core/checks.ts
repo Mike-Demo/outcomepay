@@ -64,7 +64,7 @@ export function checkRequiredSections(artifacts: ArtifactRow[]): CheckResult {
   const failures: string[] = [];
   for (const a of artifacts) {
     if (a.kind === "landing_page") {
-      if (!/<html[^>]*lang="es"/i.test(a.content)) failures.push("landing page: missing lang=\"es\"");
+      if (!/<html[^>]*lang="es(-[a-zA-Z]+)?"/i.test(a.content)) failures.push("landing page: missing lang=\"es\"");
       if (!/<title>[^<]+<\/title>/i.test(a.content)) failures.push("landing page: missing <title>");
       if (!/<h1[\s>]/i.test(a.content)) failures.push("landing page: missing <h1>");
     } else if (a.kind === "launch_brief") {
@@ -101,7 +101,7 @@ export function checkAccessibility(artifacts: ArtifactRow[]): CheckResult {
     score -= n;
     findings.push(msg);
   };
-  if (!/<html[^>]*lang="es"/i.test(html)) dock(20, 'missing lang="es"');
+  if (!/<html[^>]*lang="es(-[a-zA-Z]+)?"/i.test(html)) dock(20, 'missing lang="es"');
   if (!/<title>[^<]+<\/title>/i.test(html)) dock(15, "missing <title>");
   const h1count = (html.match(/<h1[\s>]/gi) || []).length;
   if (h1count !== 1) dock(10, `expected exactly 1 <h1>, found ${h1count}`);
