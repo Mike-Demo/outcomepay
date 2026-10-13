@@ -205,6 +205,18 @@ export default function SettlementPanel({
           {state?.settlement && !settled && (
             <span className="muted"> order {state.settlement.paypal_order_id} — approve it at PayPal, then settle</span>
           )}
+          {state?.settlement && !settled && !approveUrl && (
+            <p>
+              <a
+                className="btn btn-primary btn-sm"
+                href={`https://www.sandbox.paypal.com/checkoutnow?token=${state.settlement.paypal_order_id}`}
+                target="_blank"
+                rel="noreferrer"
+              >
+                Approve at PayPal (sandbox)
+              </a>
+            </p>
+          )}
         </li>
         <li className={settled ? "done" : ""}>
           <strong>Policy engine settles</strong>

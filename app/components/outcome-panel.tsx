@@ -1,16 +1,34 @@
 "use client";
 
-import { useState } from "react";
-import { api, type ContractView } from "./api";
+import { useEffect, useState } from "react";
+import { api, type ContractView, type OutcomeStateView } from "./api";
 import { GOLDEN_GOAL } from "../../lib/outcome-contract";
 
 /** Left panel: publish the outcome → buyer agent builds the contract. */
-export default function OutcomePanel({ onPublished }: { onPublished: (id: string) => void }) {
+export default function OutcomePanel({
+  onPublished,
+  outcomeId,
+  view,
+}: {
+  onPublished: (id: string) => void;
+  outcomeId?: string | null;
+  view?: OutcomeStateView | null;
+}) {
   const [goal, setGoal] = useState(GOLDEN_GOAL);
   const [budget, setBudget] = useState("40");
   const [contract, setContract] = useState<ContractView | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Hydrate from server state when an existing outcome is loaded (picker,
+  // ?outcome=, or a page reload) — the contract lives server-side.
+  useEffect(() => {
+    if (view && outcomeId && view.outcome.id === outcomeId) {
+      setContract(view.outcome.contract);
+      setGoal(view.outcome.goal);
+      setBudget(String(view.outcome.budgetUsd));
+    }
+  }, [view, outcomeId]);
 
   const publish = async () => {
     setBusy(true);

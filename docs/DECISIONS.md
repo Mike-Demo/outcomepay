@@ -295,3 +295,18 @@ Demo's decision to bind approvals to AgentID identity (v38):
 - Filming note: sign in at /auth once (the issuer grant persists) and
   the session covers a filming block; approvals on camera record as
   `agentid:mikedemo.jobsearch@agentmail.to`.
+
+## 2026-10-13 (evening) — Reload-safe Command Center (v39)
+
+- Found by the concurrency collision test, twice: the Command Center
+  kept the working outcome only in React state. A page reload lost the
+  run, and outcomes created via CLI/API could never be loaded into the
+  UI at all (so they could not be approved in the browser either).
+- Fix: an outcome picker fed by `GET /api/agents/outcomes`, restore via
+  `?outcome=<id>` or localStorage, and panel hydration from
+  `GET /api/agents/outcome` (contract, bids, and the team derived from
+  the selected bids). The Settlement panel re-derives the sandbox
+  buyer-approve link for a prepared order after a reload
+  (`prepare-settlement` stays non-idempotent server-side by design).
+- Server state was never at risk — the audit ledger and outcome rows
+  are the source of truth; the UI now treats them that way.

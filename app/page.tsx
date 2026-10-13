@@ -16,7 +16,7 @@ import OutcomePanel from "./components/outcome-panel";
 import MarketPanel from "./components/market-panel";
 import EvidencePanel from "./components/evidence-panel";
 import SettlementPanel from "./components/settlement-panel";
-import { api, type OutcomeStateView } from "./components/api";
+import { api, type OutcomeListItem, type OutcomeStateView } from "./components/api";
 
 const PIPELINE = [
   "Intent created",
@@ -33,18 +33,54 @@ export default function CommandCenter() {
   const [outcomeId, setOutcomeId] = useState<string | null>(null);
   const [tick, setTick] = useState(0);
   const [pipeline, setPipeline] = useState<boolean[]>(PIPELINE.map(() => false));
+  const [view, setView] = useState<OutcomeStateView | null>(null);
+  const [picker, setPicker] = useState<OutcomeListItem[]>([]);
 
   const bump = useCallback(() => setTick((t) => t + 1), []);
+
+  // Reload-safe: restore the in-progress outcome from the URL (?outcome=)
+  // or localStorage, so a refresh never loses a run.
+  useEffect(() => {
+    const fromUrl = new URLSearchParams(window.location.search).get("outcome");
+    const fromStore = window.localStorage.getItem("op_outcome");
+    const id = fromUrl || fromStore;
+    if (id) setOutcomeId(id);
+  }, []);
+
+  useEffect(() => {
+    if (!outcomeId) return;
+    window.localStorage.setItem("op_outcome", outcomeId);
+    const url = new URL(window.location.href);
+    url.searchParams.set("outcome", outcomeId);
+    window.history.replaceState(null, "", url);
+  }, [outcomeId]);
+
+  // Outcome picker data: recent outcomes from the server.
+  useEffect(() => {
+    let cancelled = false;
+    api<{ outcomes: OutcomeListItem[] }>("/api/agents/outcomes?limit=30")
+      .then((d) => {
+        if (!cancelled) setPicker(d.outcomes);
+      })
+      .catch(() => {
+        /* picker stays empty on fetch failure */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [tick]);
 
   useEffect(() => {
     if (!outcomeId) {
       setPipeline(PIPELINE.map(() => false));
+      setView(null);
       return;
     }
     let cancelled = false;
     api<OutcomeStateView>(`/api/agents/outcome?id=${encodeURIComponent(outcomeId)}`)
       .then((s) => {
         if (cancelled) return;
+        setView(s);
         const delivered = ["DELIVERED", "VERIFIED", "SETTLED"].includes(s.outcome.status);
         const captured = !!s.settlement?.capture_id;
         setPipeline([
@@ -68,7 +104,16 @@ export default function CommandCenter() {
 
   const reset = () => {
     setOutcomeId(null);
+    setView(null);
     setPipeline(PIPELINE.map(() => false));
+    try {
+      window.localStorage.removeItem("op_outcome");
+      const url = new URL(window.location.href);
+      url.searchParams.delete("outcome");
+      window.history.replaceState(null, "", url);
+    } catch {
+      /* storage unavailable — in-memory reset already applied */
+    }
   };
 
   return (
@@ -101,10 +146,36 @@ export default function CommandCenter() {
         ))}
       </ol>
 
+      <div className="outcome-picker">
+        <label className="field">
+          <span>Resume an outcome</span>
+          <select
+            value={outcomeId ?? ""}
+            onChange={(e) => {
+              const v = e.target.value;
+              if (v) {
+                setOutcomeId(v);
+                bump();
+              }
+            }}
+          >
+            <option value="">Load an existing outcome…</option>
+            {picker.map((o) => (
+              <option key={o.id} value={o.id}>
+                {o.goal.slice(0, 56)} · {o.status} · ${Number(o.budget_usd).toFixed(0)}
+              </option>
+            ))}
+          </select>
+        </label>
+        {outcomeId && <span className="muted mono">{outcomeId}</span>}
+      </div>
+
       <section className="grid">
         <article className="panel">
           <h2>Outcome + budget</h2>
           <OutcomePanel
+            outcomeId={outcomeId}
+            view={view}
             onPublished={(id) => {
               setOutcomeId(id);
               bump();
@@ -114,7 +185,7 @@ export default function CommandCenter() {
 
         <article className="panel">
           <h2>Agent network</h2>
-          <MarketPanel outcomeId={outcomeId} onTeamFormed={bump} />
+          <MarketPanel outcomeId={outcomeId} view={view} onTeamFormed={bump} />
         </article>
 
         <article className="panel">

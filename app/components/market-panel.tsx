@@ -1,20 +1,46 @@
 "use client";
 
-import { useState } from "react";
-import { api, type BidView, type TeamView } from "./api";
+import { useEffect, useState } from "react";
+import { api, type BidView, type OutcomeStateView, type TeamView } from "./api";
 
 /** Center panel: broker solicits bids, then forms the team under budget. */
 export default function MarketPanel({
   outcomeId,
+  view,
   onTeamFormed,
 }: {
   outcomeId: string | null;
+  view?: OutcomeStateView | null;
   onTeamFormed: () => void;
 }) {
   const [bids, setBids] = useState<BidView[] | null>(null);
   const [team, setTeam] = useState<TeamView | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Hydrate from server state when an existing outcome is loaded (picker,
+  // ?outcome=, or a page reload) — bids and the team live server-side; the
+  // team view is derived from the selected bids.
+  useEffect(() => {
+    if (!view || !outcomeId || view.outcome.id !== outcomeId) return;
+    if (view.bids.length > 0) setBids(view.bids);
+    if (view.team) {
+      const members = view.bids
+        .filter((b) => b.decision === "selected")
+        .map((b) => ({ id: b.provider_id, role: b.role, capability: b.capability, price: b.price, color: b.color }));
+      const rejected = view.bids
+        .filter((b) => b.decision === "rejected")
+        .map((b) => ({ provider_id: b.provider_id, reason: b.decision_reason ?? "" }));
+      setTeam({
+        id: "",
+        provider_ids: view.team.provider_ids,
+        total_usd: view.team.total_usd,
+        budget_usd: view.outcome.budgetUsd,
+        rejected,
+        members,
+      });
+    }
+  }, [view, outcomeId]);
 
   const run = async (label: string, fn: () => Promise<void>) => {
     setBusy(label);

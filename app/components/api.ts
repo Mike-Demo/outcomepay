@@ -73,6 +73,15 @@ export interface VerificationView {
   created_at: number;
 }
 
+export interface OutcomeListItem {
+  id: string;
+  goal: string;
+  budget_usd: string;
+  status: string;
+  created_at: number;
+  updated_at: number;
+}
+
 export interface OutcomeStateView {
   outcome: {
     id: string;

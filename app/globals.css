@@ -250,6 +250,16 @@ body {
   border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; font: inherit;
 }
 .field textarea { resize: vertical; }
+.field select {
+  width: 100%; box-sizing: border-box; background: #0b1220; color: var(--text);
+  border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; font: inherit;
+}
+.outcome-picker {
+  display: flex; align-items: flex-end; gap: 14px; flex-wrap: wrap;
+  margin: 4px 0 16px;
+}
+.outcome-picker .field { min-width: min(440px, 100%); margin-bottom: 0; }
+.outcome-picker .mono { font-size: 12px; padding-bottom: 10px; }
 .ppanel .actions { display: flex; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
 
 .contract { margin-top: 16px; border-top: 1px solid var(--line); padding-top: 14px; }
