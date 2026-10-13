@@ -33,3 +33,23 @@ materially similar artifacts have ranged 68–100.
 Happy path reaches SETTLED with a valid chain and a complete receipt;
 every probe P1–P8 behaves as specified; any verify FAIL is recovered via
 the feedback loop within 2 iterations.
+
+## Results — 2026-10-13 rehearsal (v37/v38)
+
+Outcome `out_mv76my7zpaz6rw` SETTLED: PayPal order `89S50650RT636330J`,
+authorization `09M90787TM670390E`, capture `9WD20716S7726693C`, $37.00.
+Verification PASS on the FIRST attempt (A 100 / B 85, accessibility 100);
+pipeline ~4 minutes wall clock, no feedback loop. Buyer approval was
+completed by Cane in the browser using Demo's Secure Vault sandbox
+buyer login (saved 2026-10-13 for sandbox.paypal.com) — Demo no longer
+needs to tap for rehearsals.
+
+Probes: P1 idempotency ✅ · P2 settle-before-approve refused ✅ (error
+is `no_settlement` — the settlement-record gate fires first; narration
+should say settle refuses without a prepared order + PASS + approval) ·
+P3 freshness ✅ (re-delivery on out_mv72gjbmtsytm3 invalidated its
+approval; ledger shows approval.invalidated) · P4 legacy gate ✅
+(policy_gated on both routes) · P5 double-settle + deliver-after-settle
+✅ (already_settled) · P6 MCP/identity 401 contract ✅ · P7 tamper
+evidence ✅ (11-entry chain INTACT; altered copy CHAIN BROKEN) · P8
+RateLimit headers ✅ (replay-response gap found here, fixed in v38).
