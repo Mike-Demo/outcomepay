@@ -149,3 +149,28 @@ degrade to stateless rather than 500ing.
 - No chain, no token, no wallet, no gas. The money stays anchored in PayPal's
   ledger (real order/auth/capture IDs); the hash chain covers everything around
   the money.
+
+## Code review fixes (2026-10-13)
+A full code review (2026-10-13) plus a live stress-test run produced these
+changes, all deployed and verified against the live space:
+- **Policy gate on legacy PayPal routes.** `/api/paypal/authorize` and
+  `/api/paypal/capture` now refuse any order/authorization that belongs to an
+  agent settlement (`policy_gated`). Settlement money moves only through
+  `POST /api/agents/settle`. The standalone routes remain for harness orders.
+- **Approval freshness.** `approve` rejects when artifacts are newer than the
+  PASS verification (`stale_verification`), and `deliver` now invalidates a
+  recorded approval when new artifacts land (ledger: `approval.invalidated`).
+  Settled outcomes are sealed: `deliver` rejects with `already_settled`.
+- **LLM resilience.** Retries on 429/5xx (3s/8s/15s backoff) + 60s per-attempt
+  timeout in the LLM client.
+- **Evaluator semantics.** Reviewers never see other reviewers' reports
+  (independence). Reviewer context is trimmed per kind — the landing page gets
+  its full document, because a truncated page reads as "incomplete markup" and
+  caused a false FAIL. Reviewer A's rubric is explicit: JSON keys and CLI
+  command names stay English by design; only string *values* are judged.
+- **Checks accept regional lang tags** (`lang="es-US"`), not just `lang="es"`.
+- Verified live on outcome `out_mv72gjbmtsytm3`: reviewer split → feedback
+  loop → PASS (A 100 / B 92) → approval → re-delivery invalidated approval →
+  stale approval rejected → re-verify → approval accepted. Ledger: 31
+  entries, chain intact; a tampered export copy is detected as BROKEN by
+  `scripts/verify-ledger.py`.

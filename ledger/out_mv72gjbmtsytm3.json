@@ -1,0 +1,670 @@
+{
+    "ok": true,
+    "outcomeId": "out_mv72gjbmtsytm3",
+    "entries": [
+        {
+            "seq": 0,
+            "kind": "outcome.published",
+            "payload": {
+                "goal": "Create and validate a Spanish launch kit for TidyLedger",
+                "budget": 40,
+                "deliverables": [
+                    "translated_copy",
+                    "landing_page",
+                    "launch_brief",
+                    "quality_report"
+                ],
+                "acceptance_tests": [
+                    "no_untranslated_strings",
+                    "required_sections_present",
+                    "accessibility_score_gte_80",
+                    "evaluator_consensus_gte_80"
+                ]
+            },
+            "prev_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+            "hash": "4e428de371cb037566c410c682f2ccb6ff8ed16cd93f1f0701fb9541f37dbf97",
+            "created_at": 1791919256748
+        },
+        {
+            "seq": 1,
+            "kind": "team.formed",
+            "payload": {
+                "provider_ids": [
+                    "localizer-01",
+                    "pagebuilder-01",
+                    "researcher-01",
+                    "reviewer-a",
+                    "reviewer-b"
+                ],
+                "total_usd": "37.00",
+                "budget_usd": "40.00",
+                "rejected": [
+                    "pagebuilder-02",
+                    "localizer-02",
+                    "quickmt-01"
+                ]
+            },
+            "prev_hash": "4e428de371cb037566c410c682f2ccb6ff8ed16cd93f1f0701fb9541f37dbf97",
+            "hash": "335083565695716fbdcf82bb5f3671068ebac4e11b61e3ddb4fb1dac39c9c126",
+            "created_at": 1791919262671
+        },
+        {
+            "seq": 2,
+            "kind": "artifact.delivered",
+            "payload": {
+                "provider_id": "localizer-01",
+                "mode": "live",
+                "artifacts": [
+                    {
+                        "kind": "translated_copy",
+                        "title": "TidyLedger UI strings (es-US)"
+                    },
+                    {
+                        "kind": "translated_copy",
+                        "title": "TidyLedger README (es-US)"
+                    }
+                ]
+            },
+            "prev_hash": "335083565695716fbdcf82bb5f3671068ebac4e11b61e3ddb4fb1dac39c9c126",
+            "hash": "174254797f6a0469e1a48c373e9e9165c75cea875af1cd067c9bfa3e66a8d129",
+            "created_at": 1791919272798
+        },
+        {
+            "seq": 3,
+            "kind": "artifact.delivered",
+            "payload": {
+                "provider_id": "pagebuilder-01",
+                "mode": "live",
+                "artifacts": [
+                    {
+                        "kind": "landing_page",
+                        "title": "TidyLedger launch page (es-US)"
+                    }
+                ]
+            },
+            "prev_hash": "174254797f6a0469e1a48c373e9e9165c75cea875af1cd067c9bfa3e66a8d129",
+            "hash": "cef4d269ca0618010046fd0436a0ed291566b1ecd441c89194160e3c3f9403a8",
+            "created_at": 1791919281117
+        },
+        {
+            "seq": 4,
+            "kind": "artifact.delivered",
+            "payload": {
+                "provider_id": "researcher-01",
+                "mode": "live",
+                "artifacts": [
+                    {
+                        "kind": "launch_brief",
+                        "title": "Launch brief: Spanish-speaking developers"
+                    }
+                ]
+            },
+            "prev_hash": "cef4d269ca0618010046fd0436a0ed291566b1ecd441c89194160e3c3f9403a8",
+            "hash": "b6bf078274032588aa30c08c26c3a4869ddb3be98cf7808576d8b34ee4e33bbf",
+            "created_at": 1791919288027
+        },
+        {
+            "seq": 5,
+            "kind": "artifact.delivered",
+            "payload": {
+                "provider_id": "reviewer-a",
+                "mode": "live",
+                "artifacts": [
+                    {
+                        "kind": "quality_report",
+                        "title": "Quality review A \u2014 localization QA"
+                    }
+                ]
+            },
+            "prev_hash": "b6bf078274032588aa30c08c26c3a4869ddb3be98cf7808576d8b34ee4e33bbf",
+            "hash": "15fab83ac1897279e87ea5a7dbde1f2cd3f171922a99796a1d2f2fab34a7be98",
+            "created_at": 1791919294840
+        },
+        {
+            "seq": 6,
+            "kind": "artifact.delivered",
+            "payload": {
+                "provider_id": "reviewer-b",
+                "mode": "live",
+                "artifacts": [
+                    {
+                        "kind": "quality_report",
+                        "title": "Quality review B \u2014 launch readiness"
+                    }
+                ]
+            },
+            "prev_hash": "15fab83ac1897279e87ea5a7dbde1f2cd3f171922a99796a1d2f2fab34a7be98",
+            "hash": "a620c0b193f2a9b90fdd157d43c69a8ab762e956587111ab8b5eabca9c1ec489",
+            "created_at": 1791919300070
+        },
+        {
+            "seq": 7,
+            "kind": "verification.completed",
+            "payload": {
+                "overall": "FAIL",
+                "checks": [
+                    {
+                        "id": "no_untranslated_strings",
+                        "passed": true
+                    },
+                    {
+                        "id": "required_sections_present",
+                        "passed": true
+                    },
+                    {
+                        "id": "accessibility_score_gte_80",
+                        "passed": true
+                    },
+                    {
+                        "id": "evaluator_consensus_gte_80",
+                        "passed": false
+                    },
+                    {
+                        "id": "budget",
+                        "passed": true
+                    }
+                ]
+            },
+            "prev_hash": "a620c0b193f2a9b90fdd157d43c69a8ab762e956587111ab8b5eabca9c1ec489",
+            "hash": "ee99d71750da6d14f9f24dbaf3ebd4f41016173a715057c2ea0a125a70c40f42",
+            "created_at": 1791919302538
+        },
+        {
+            "seq": 8,
+            "kind": "artifact.delivered",
+            "payload": {
+                "provider_id": "reviewer-a",
+                "mode": "live",
+                "artifacts": [
+                    {
+                        "kind": "quality_report",
+                        "title": "Quality review A \u2014 localization QA"
+                    }
+                ]
+            },
+            "prev_hash": "ee99d71750da6d14f9f24dbaf3ebd4f41016173a715057c2ea0a125a70c40f42",
+            "hash": "bf939aa7dcf713ddc2a596977ef658156d929442cf43c63d0df411a6a8e9359b",
+            "created_at": 1791919324431
+        },
+        {
+            "seq": 9,
+            "kind": "artifact.delivered",
+            "payload": {
+                "provider_id": "reviewer-b",
+                "mode": "live",
+                "artifacts": [
+                    {
+                        "kind": "quality_report",
+                        "title": "Quality review B \u2014 launch readiness"
+                    }
+                ]
+            },
+            "prev_hash": "bf939aa7dcf713ddc2a596977ef658156d929442cf43c63d0df411a6a8e9359b",
+            "hash": "a31a3f26ab0a91d8a616dad75dbc8bdc0d4ba8c1b913bf16ac99efd5b45e5014",
+            "created_at": 1791919356207
+        },
+        {
+            "seq": 10,
+            "kind": "verification.completed",
+            "payload": {
+                "overall": "FAIL",
+                "checks": [
+                    {
+                        "id": "no_untranslated_strings",
+                        "passed": true
+                    },
+                    {
+                        "id": "required_sections_present",
+                        "passed": true
+                    },
+                    {
+                        "id": "accessibility_score_gte_80",
+                        "passed": true
+                    },
+                    {
+                        "id": "evaluator_consensus_gte_80",
+                        "passed": false
+                    },
+                    {
+                        "id": "budget",
+                        "passed": true
+                    }
+                ]
+            },
+            "prev_hash": "a31a3f26ab0a91d8a616dad75dbc8bdc0d4ba8c1b913bf16ac99efd5b45e5014",
+            "hash": "c05743a5756755d48f1d022d17b46f0b3507d617004146d1df1b71020a750b62",
+            "created_at": 1791919360177
+        },
+        {
+            "seq": 11,
+            "kind": "artifact.delivered",
+            "payload": {
+                "provider_id": "pagebuilder-01",
+                "mode": "live",
+                "artifacts": [
+                    {
+                        "kind": "landing_page",
+                        "title": "TidyLedger launch page (es-US)"
+                    }
+                ]
+            },
+            "prev_hash": "c05743a5756755d48f1d022d17b46f0b3507d617004146d1df1b71020a750b62",
+            "hash": "0608df5131eb58a46e86aabe3cfe170f7f8f27eb8875e5a9e9dc5d7351cd94c1",
+            "created_at": 1791919411102
+        },
+        {
+            "seq": 12,
+            "kind": "artifact.delivered",
+            "payload": {
+                "provider_id": "reviewer-a",
+                "mode": "live",
+                "artifacts": [
+                    {
+                        "kind": "quality_report",
+                        "title": "Quality review A \u2014 localization QA"
+                    }
+                ]
+            },
+            "prev_hash": "0608df5131eb58a46e86aabe3cfe170f7f8f27eb8875e5a9e9dc5d7351cd94c1",
+            "hash": "e859d3a4137127b44802b93d994e3f48922e0726045b871ce26b49e858e8e6d4",
+            "created_at": 1791919422366
+        },
+        {
+            "seq": 13,
+            "kind": "artifact.delivered",
+            "payload": {
+                "provider_id": "reviewer-b",
+                "mode": "live",
+                "artifacts": [
+                    {
+                        "kind": "quality_report",
+                        "title": "Quality review B \u2014 launch readiness"
+                    }
+                ]
+            },
+            "prev_hash": "e859d3a4137127b44802b93d994e3f48922e0726045b871ce26b49e858e8e6d4",
+            "hash": "d00360d67b6f3fdfb0435f03df79182876e90510b8b99c9a89eca14de4d20109",
+            "created_at": 1791919428250
+        },
+        {
+            "seq": 14,
+            "kind": "verification.completed",
+            "payload": {
+                "overall": "FAIL",
+                "checks": [
+                    {
+                        "id": "no_untranslated_strings",
+                        "passed": true
+                    },
+                    {
+                        "id": "required_sections_present",
+                        "passed": false
+                    },
+                    {
+                        "id": "accessibility_score_gte_80",
+                        "passed": true
+                    },
+                    {
+                        "id": "evaluator_consensus_gte_80",
+                        "passed": false
+                    },
+                    {
+                        "id": "budget",
+                        "passed": true
+                    }
+                ]
+            },
+            "prev_hash": "d00360d67b6f3fdfb0435f03df79182876e90510b8b99c9a89eca14de4d20109",
+            "hash": "fe99112513f12ba4117cd00224d18f50dd275e355c33f08c988bc765041e7a7a",
+            "created_at": 1791919431050
+        },
+        {
+            "seq": 15,
+            "kind": "verification.completed",
+            "payload": {
+                "overall": "FAIL",
+                "checks": [
+                    {
+                        "id": "no_untranslated_strings",
+                        "passed": true
+                    },
+                    {
+                        "id": "required_sections_present",
+                        "passed": true
+                    },
+                    {
+                        "id": "accessibility_score_gte_80",
+                        "passed": true
+                    },
+                    {
+                        "id": "evaluator_consensus_gte_80",
+                        "passed": false
+                    },
+                    {
+                        "id": "budget",
+                        "passed": true
+                    }
+                ]
+            },
+            "prev_hash": "fe99112513f12ba4117cd00224d18f50dd275e355c33f08c988bc765041e7a7a",
+            "hash": "85f4613dc92e283d70a2f45c4dbe5a2d952cdb5fa9f775849d06e26e1a151705",
+            "created_at": 1791919590818
+        },
+        {
+            "seq": 16,
+            "kind": "artifact.delivered",
+            "payload": {
+                "provider_id": "reviewer-a",
+                "mode": "live",
+                "artifacts": [
+                    {
+                        "kind": "quality_report",
+                        "title": "Quality review A \u2014 localization QA"
+                    }
+                ]
+            },
+            "prev_hash": "85f4613dc92e283d70a2f45c4dbe5a2d952cdb5fa9f775849d06e26e1a151705",
+            "hash": "7fe152959dcaa9ed1be5090c497f84af9b3f190ed1c3b6e23a5a692fb5a8d0e6",
+            "created_at": 1791919599658
+        },
+        {
+            "seq": 17,
+            "kind": "artifact.delivered",
+            "payload": {
+                "provider_id": "reviewer-b",
+                "mode": "live",
+                "artifacts": [
+                    {
+                        "kind": "quality_report",
+                        "title": "Quality review B \u2014 launch readiness"
+                    }
+                ]
+            },
+            "prev_hash": "7fe152959dcaa9ed1be5090c497f84af9b3f190ed1c3b6e23a5a692fb5a8d0e6",
+            "hash": "17f07c629aaf485e480b8c9f1e7108d638c9a8bb78d7452db4943c1f750d4c71",
+            "created_at": 1791919604646
+        },
+        {
+            "seq": 18,
+            "kind": "verification.completed",
+            "payload": {
+                "overall": "FAIL",
+                "checks": [
+                    {
+                        "id": "no_untranslated_strings",
+                        "passed": true
+                    },
+                    {
+                        "id": "required_sections_present",
+                        "passed": true
+                    },
+                    {
+                        "id": "accessibility_score_gte_80",
+                        "passed": true
+                    },
+                    {
+                        "id": "evaluator_consensus_gte_80",
+                        "passed": false
+                    },
+                    {
+                        "id": "budget",
+                        "passed": true
+                    }
+                ]
+            },
+            "prev_hash": "17f07c629aaf485e480b8c9f1e7108d638c9a8bb78d7452db4943c1f750d4c71",
+            "hash": "e89c17ff5cc09cbbbdb84b39aa9363ca266c562509c602aabbe11e41dc21fa7d",
+            "created_at": 1791919607198
+        },
+        {
+            "seq": 19,
+            "kind": "artifact.delivered",
+            "payload": {
+                "provider_id": "researcher-01",
+                "mode": "live",
+                "artifacts": [
+                    {
+                        "kind": "launch_brief",
+                        "title": "Launch brief: Spanish-speaking developers"
+                    }
+                ]
+            },
+            "prev_hash": "e89c17ff5cc09cbbbdb84b39aa9363ca266c562509c602aabbe11e41dc21fa7d",
+            "hash": "4cbeb117e180e567f28af66f5ed621282d9d3cad53fef5b3d571e8d3a814ec9a",
+            "created_at": 1791919838676
+        },
+        {
+            "seq": 20,
+            "kind": "artifact.delivered",
+            "payload": {
+                "provider_id": "reviewer-a",
+                "mode": "live",
+                "artifacts": [
+                    {
+                        "kind": "quality_report",
+                        "title": "Quality review A \u2014 localization QA"
+                    }
+                ]
+            },
+            "prev_hash": "4cbeb117e180e567f28af66f5ed621282d9d3cad53fef5b3d571e8d3a814ec9a",
+            "hash": "365995332ccb3b7a79b2cd868ad08eff8898c5c9b6ac610c52fe0d07317db612",
+            "created_at": 1791919843841
+        },
+        {
+            "seq": 21,
+            "kind": "artifact.delivered",
+            "payload": {
+                "provider_id": "reviewer-b",
+                "mode": "live",
+                "artifacts": [
+                    {
+                        "kind": "quality_report",
+                        "title": "Quality review B \u2014 launch readiness"
+                    }
+                ]
+            },
+            "prev_hash": "365995332ccb3b7a79b2cd868ad08eff8898c5c9b6ac610c52fe0d07317db612",
+            "hash": "8cbfe08af9a0e254ea43166023086b8772db274350194d4e6770f6b1f15cbe8a",
+            "created_at": 1791919850233
+        },
+        {
+            "seq": 22,
+            "kind": "verification.completed",
+            "payload": {
+                "overall": "FAIL",
+                "checks": [
+                    {
+                        "id": "no_untranslated_strings",
+                        "passed": true
+                    },
+                    {
+                        "id": "required_sections_present",
+                        "passed": true
+                    },
+                    {
+                        "id": "accessibility_score_gte_80",
+                        "passed": true
+                    },
+                    {
+                        "id": "evaluator_consensus_gte_80",
+                        "passed": false
+                    },
+                    {
+                        "id": "budget",
+                        "passed": true
+                    }
+                ]
+            },
+            "prev_hash": "8cbfe08af9a0e254ea43166023086b8772db274350194d4e6770f6b1f15cbe8a",
+            "hash": "cc11841d155508c76bcfcef9904ac4464bf36fe8e0f7fc8a9a39d6c0e36ca004",
+            "created_at": 1791919853092
+        },
+        {
+            "seq": 23,
+            "kind": "artifact.delivered",
+            "payload": {
+                "provider_id": "reviewer-a",
+                "mode": "live",
+                "artifacts": [
+                    {
+                        "kind": "quality_report",
+                        "title": "Quality review A \u2014 localization QA"
+                    }
+                ]
+            },
+            "prev_hash": "cc11841d155508c76bcfcef9904ac4464bf36fe8e0f7fc8a9a39d6c0e36ca004",
+            "hash": "ee8db48b6474421bb2030531fd378e380ee57a78c8d85797db000451c887ccc1",
+            "created_at": 1791920059532
+        },
+        {
+            "seq": 24,
+            "kind": "verification.completed",
+            "payload": {
+                "overall": "PASS",
+                "checks": [
+                    {
+                        "id": "no_untranslated_strings",
+                        "passed": true
+                    },
+                    {
+                        "id": "required_sections_present",
+                        "passed": true
+                    },
+                    {
+                        "id": "accessibility_score_gte_80",
+                        "passed": true
+                    },
+                    {
+                        "id": "evaluator_consensus_gte_80",
+                        "passed": true
+                    },
+                    {
+                        "id": "budget",
+                        "passed": true
+                    }
+                ]
+            },
+            "prev_hash": "ee8db48b6474421bb2030531fd378e380ee57a78c8d85797db000451c887ccc1",
+            "hash": "66dd661fb32c3883c79db218514dcd6942df48edfb7640a8731c0760cbe60e9a",
+            "created_at": 1791920063036
+        },
+        {
+            "seq": 25,
+            "kind": "verification.completed",
+            "payload": {
+                "overall": "PASS",
+                "checks": [
+                    {
+                        "id": "no_untranslated_strings",
+                        "passed": true
+                    },
+                    {
+                        "id": "required_sections_present",
+                        "passed": true
+                    },
+                    {
+                        "id": "accessibility_score_gte_80",
+                        "passed": true
+                    },
+                    {
+                        "id": "evaluator_consensus_gte_80",
+                        "passed": true
+                    },
+                    {
+                        "id": "budget",
+                        "passed": true
+                    }
+                ]
+            },
+            "prev_hash": "66dd661fb32c3883c79db218514dcd6942df48edfb7640a8731c0760cbe60e9a",
+            "hash": "910299bc94795e02afc00242a4f7e462d140c355af90a38a4c358f7191967be8",
+            "created_at": 1791920079882
+        },
+        {
+            "seq": 26,
+            "kind": "approval.recorded",
+            "payload": {
+                "approver": "human",
+                "verification_id": "ver_mv72y6ep63jwmw"
+            },
+            "prev_hash": "910299bc94795e02afc00242a4f7e462d140c355af90a38a4c358f7191967be8",
+            "hash": "0075369b2649fc10c9ab1f66818aad95b249a201f53bc491447bea73f7d9f2ae",
+            "created_at": 1791920082368
+        },
+        {
+            "seq": 27,
+            "kind": "approval.invalidated",
+            "payload": {
+                "reason": "artifacts_changed",
+                "provider_id": "localizer-01"
+            },
+            "prev_hash": "0075369b2649fc10c9ab1f66818aad95b249a201f53bc491447bea73f7d9f2ae",
+            "hash": "c1d9c7a3393aead7bb8955fd2571e50df9677256434742e1d487e5b356b049b8",
+            "created_at": 1791920087510
+        },
+        {
+            "seq": 28,
+            "kind": "artifact.delivered",
+            "payload": {
+                "provider_id": "localizer-01",
+                "mode": "live",
+                "artifacts": [
+                    {
+                        "kind": "translated_copy",
+                        "title": "TidyLedger UI strings (es-US)"
+                    },
+                    {
+                        "kind": "translated_copy",
+                        "title": "TidyLedger README (es-US)"
+                    }
+                ]
+            },
+            "prev_hash": "c1d9c7a3393aead7bb8955fd2571e50df9677256434742e1d487e5b356b049b8",
+            "hash": "c29f2ebfe46813b61b737d4a2bfb31b71b9ab06c42c33a9c288f993da876bfe9",
+            "created_at": 1791920087673
+        },
+        {
+            "seq": 29,
+            "kind": "verification.completed",
+            "payload": {
+                "overall": "PASS",
+                "checks": [
+                    {
+                        "id": "no_untranslated_strings",
+                        "passed": true
+                    },
+                    {
+                        "id": "required_sections_present",
+                        "passed": true
+                    },
+                    {
+                        "id": "accessibility_score_gte_80",
+                        "passed": true
+                    },
+                    {
+                        "id": "evaluator_consensus_gte_80",
+                        "passed": true
+                    },
+                    {
+                        "id": "budget",
+                        "passed": true
+                    }
+                ]
+            },
+            "prev_hash": "c29f2ebfe46813b61b737d4a2bfb31b71b9ab06c42c33a9c288f993da876bfe9",
+            "hash": "35634d76b6b4b9adc0a2df94f719616db22a7c3d70fc83f6639619acdf0d81f1",
+            "created_at": 1791920100138
+        },
+        {
+            "seq": 30,
+            "kind": "approval.recorded",
+            "payload": {
+                "approver": "human",
+                "verification_id": "ver_mv72ym0txe6bqf"
+            },
+            "prev_hash": "35634d76b6b4b9adc0a2df94f719616db22a7c3d70fc83f6639619acdf0d81f1",
+            "hash": "f80ae41fc640ad56b4ab2a13651dfc1bd6df53829e4fd80822f7fb6f8c778a1b",
+            "created_at": 1791920102898
+        }
+    ]
+}
