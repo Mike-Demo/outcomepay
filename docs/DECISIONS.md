@@ -263,9 +263,14 @@ Cane before acting — the findings held up. Fixed the same day (v37):
 
 Accepted as documented prototype risks (not fixed): capture-path
 concurrency has no atomic claim (PayPal's duplicate-capture rejection is
-the backstop; noted in code), the hash chain proves tamper-evidence of
-entries, not completeness or provenance, and idempotent replay is a
-sequential guarantee. The deepest finding — the approval endpoint is
+the backstop; noted in code — and demonstrated 2026-10-13: a triple
+concurrent settle produced exactly one capture, with PayPal rejecting
+the mid-flight loser `AUTHORIZATION_ALREADY_CAPTURED` and the app
+rejecting the late one `already_settled`), the hash chain proves
+tamper-evidence of entries, not completeness or provenance, and
+idempotent replay is a sequential guarantee (also confirmed empirically
+2026-10-13: five concurrent same-key creates produced five outcomes —
+fix candidate: atomic key reservation). The deepest finding — the approval endpoint is
 unauthenticated, so "human approval" is a workflow gate rather than an
 identity guarantee — is Demo's design call; the MCP path already
 attributes approvals to the caller's AgentID identity.

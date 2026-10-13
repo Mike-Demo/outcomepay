@@ -53,3 +53,48 @@ approval; ledger shows approval.invalidated) · P4 legacy gate ✅
 ✅ (already_settled) · P6 MCP/identity 401 contract ✅ · P7 tamper
 evidence ✅ (11-entry chain INTACT; altered copy CHAIN BROKEN) · P8
 RateLimit headers ✅ (replay-response gap found here, fixed in v38).
+
+## Concurrency collision test — 2026-10-13 evening
+
+Five agents ran against the live deployment simultaneously (three full
+pipelines, one same-key idempotency storm, one same-outcome delivery
+storm), followed by a coordinated triple-settle race.
+
+- **Independent pipelines (A/B/C):** A PASS (100/84 after one feedback
+  round), B PASS first attempt (100/92), C FAIL on consensus only —
+  Reviewer B scored 72 twice, unchanged after its flagged gap was
+  fixed (reviewer variance, not collisions). Zero cross-outcome
+  contamination: bids, teams, artifacts, and verifications stayed
+  isolated per outcome. All artifacts live-mode.
+- **Idempotency storm (D): RACE CONFIRMED.** 5 concurrent
+  `POST /api/agents/outcome` with one Idempotency-Key produced 5
+  distinct outcomes and zero replays. The check-then-store design only
+  protects sequential replays (P1). Fix candidate: atomic key
+  reservation (insert-or-conflict before doing the work).
+- **Same-outcome delivery storm (E):** 3 concurrent producer
+  deliveries + concurrent reviewers on one outcome — hash chain stayed
+  linear (7 entries, unique prev_hashes, verify valid). No fork.
+- **Triple-settle race:** outcome `out_mv7blg4lfv25d8` (VERIFIED,
+  approved by `agentid:mikedemo.jobsearch@agentmail.to`, PayPal order
+  `5R3878762Y693520R` buyer-approved + authorized). Three concurrent
+  settle calls → exactly ONE capture (`31722163FV664224D`, $37.00).
+  Loser #2 was rejected by PayPal (`AUTHORIZATION_ALREADY_CAPTURED`);
+  loser #3 by the app's `already_settled` recheck. Ledger: 11 entries,
+  chain valid, exactly one `settlement.captured`.
+- **The real coupling point is the shared Groq free-tier budget**
+  (8,000 tokens/minute per API key): repeated 429s on deliver across
+  all runners, roughly doubling wall-clock (~6.5–7.7 min per pipeline).
+  Server retry/backoff absorbs it sequentially, not under a 5-way
+  storm. Single sequential runs (the filming flow) are unaffected.
+- **Edge transport fraying:** SpaceFast edge returned 502 problem
+  documents for two deliveries that had actually committed
+  server-side. The CLI printed them as success (exit 0) because the
+  body had no `ok` field — CLI fixed same evening: any non-2xx now
+  exits 1 with a "re-check state before retrying" warning.
+- **Command Center state loss (fixed in v39):** the working outcome
+  lived only in React state; a reload lost the run and API/CLI-created
+  outcomes could not be loaded or approved in the UI at all. v39 adds
+  an outcome picker, `?outcome=` + localStorage restore, panel
+  hydration from server state, and a restored buyer-approve link for
+  prepared orders. Proven by resuming `out_mv7blg4lfv25d8` in the
+  browser after the fix and completing the run.
