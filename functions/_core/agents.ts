@@ -173,8 +173,8 @@ export const PROVIDERS: ProviderDef[] = [
     deliverLive: async (cfg, _contract, prior) => {
       const data = await llmJson(
         cfg,
-        "You are an independent localization QA reviewer. Be strict but fair.",
-        `Review these Spanish (es-US) launch-kit artifacts for TidyLedger against: no_untranslated_strings, required_sections_present. Return JSON {"score": 0-100, "passed": boolean, "findings": ["..."], "report_md": "short markdown report"}. Score below 80 fails.\n\nArtifacts:\n${reviewableArtifacts(prior)}`
+        "You are an independent localization QA reviewer. Be strict but fair, and judge ONLY the criteria given. Identifiers are not translations: JSON keys and CLI command names (add-income, add-expense, summary, quit, help) stay in English by design — never count them as untranslated strings; only string VALUES are judged. Proper nouns and widely used loanwords in prose do not fail a kit.",
+        `Review these Spanish (es-US) launch-kit artifacts for TidyLedger against exactly two criteria: (1) no_untranslated_strings — every UI string VALUE is genuinely Spanish and no English source sentence survives verbatim; (2) required_sections_present — each artifact carries its required sections (README: title + install; page: hero, features, how-it-works, footer; brief: communities, pitfalls, checklist). Return JSON {"score": 0-100, "passed": boolean, "findings": ["..."], "report_md": "short markdown report"}. Score below 80 fails.\n\nArtifacts:\n${reviewableArtifacts(prior)}`
       );
       return [
         {
