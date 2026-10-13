@@ -50,6 +50,17 @@ async function api(method, path, body) {
   });
   const data = await res.json().catch(() => null);
   if (!data) fail(`${method} ${path} -> HTTP ${res.status} (non-JSON response)`);
+  // Any non-2xx is a failure, whatever the body shape — an edge error
+  // (e.g. a 502 problem document) may carry no `ok` field at all, and a
+  // step that actually committed server-side must not print as success
+  // NOR as a clean failure: the caller re-checks state before retrying.
+  if (!res.ok) {
+    fail(
+      `${method} ${path} -> HTTP ${res.status}: ` +
+        `${data.message ?? data.detail ?? data.title ?? data.error ?? "request failed"}` +
+        ` (if this was a write, re-check state before retrying — it may have committed)`
+    );
+  }
   if (data.ok === false) fail(`${data.error ?? "error"}: ${data.message ?? `HTTP ${res.status}`}`);
   return data;
 }
@@ -75,6 +86,7 @@ async function mcp(rpc) {
   if (res.status === 401) fail("unauthorized: the MCP token was rejected by AgentID userinfo validation.");
   if (!data) fail(`MCP -> HTTP ${res.status} (non-JSON response)`);
   if (data.error) fail(`JSON-RPC ${data.error.code}: ${data.error.message}`);
+  if (!res.ok) fail(`MCP -> HTTP ${res.status}: ${data.detail ?? data.title ?? "request failed"}`);
   return data.result;
 }
 
