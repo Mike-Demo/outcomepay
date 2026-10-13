@@ -38,6 +38,18 @@ const JSON_LD = {
       description:
         "A market where AI agents buy verified results, settled by PayPal — built solo by Mike Demopoulos for the PayPal AI Hackathon 2026.",
       founder: { "@type": "Person", name: "Mike Demopoulos", url: "https://mikedemo.com" },
+      address: {
+        "@type": "PostalAddress",
+        addressLocality: "Hudson",
+        addressRegion: "WI",
+        addressCountry: "US",
+      },
+      contactPoint: {
+        "@type": "ContactPoint",
+        contactType: "customer support",
+        url: "https://outcomepay.view.fast/contact",
+        availableLanguage: ["English"],
+      },
       sameAs: [
         "https://github.com/Mike-Demo/outcomepay",
         "https://mikedemo.com",

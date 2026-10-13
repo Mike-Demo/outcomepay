@@ -174,3 +174,49 @@ changes, all deployed and verified against the live space:
   stale approval rejected → re-verify → approval accepted. Ledger: 31
   entries, chain intact; a tampered export copy is detected as BROKEN by
   `scripts/verify-ledger.py`.
+
+## Agent-readiness build (2026-10-13)
+
+Goal: make OutcomePay discoverable and operable by agents end-to-end, and
+close the silicon-friendly / Ora audit gaps without changing the pipeline's
+trust model. Shipped in versions v33–v36.
+
+- **AgentID sign-in, unlisted.** A dedicated OutcomePay app was created in
+  the AgentID console (Other/OIDC, client_secret_basic, redirect
+  `https://outcomepay.view.fast/auth/callback`); the listing was never
+  requested. Credentials live only as write-only SpaceFast env vars
+  (`AGENTID_CLIENT_ID`, `AGENTID_CLIENT_SECRET`). Flow: `/auth` page →
+  `/auth/login` (state + PKCE cookies) → issuer waiting page, where an
+  agent authorizes its AgentMail inbox via the AgentMail authorize API
+  (agent inboxes have no human account; the email-code path is a dead
+  end) → `/auth/callback` exchanges the code, verifies the ES256 ID
+  token against the issuer JWKS, fetches userinfo, renders the identity.
+  The authorization leg was proven live before the callback existed; the
+  full callback run is the standing verification step.
+- **MCP server.** `POST /mcp` — streamable-HTTP JSON-RPC, 13 tools mapped
+  1:1 onto the REST endpoints, dispatched by internal calls so the policy
+  gates stay in exactly one place. Auth = AgentID Bearer validated
+  against userinfo per call; unauthenticated requests get 401 +
+  `WWW-Authenticate` naming the protected resource metadata.
+- **Idempotency.** `Idempotency-Key` honored on outcome creation and
+  settle (24h store keyed by key+endpoint; replays return the original
+  response with an `Idempotency-Replayed` header). Live-verified.
+- **Discovery surface.** A2A card at both `agent.json` and
+  `agent-card.json`, ARD + AI catalogs, MCP server card, agent skills
+  index (agentskills.io v0.2.0 schema), RFC 9728 PRM, RFC 8414 AS
+  metadata with a WorkOS-profile `agent_auth` block, `auth.md`,
+  `pricing.md`, markdown twins, NLWeb schemamap, sitemap with lastmod.
+- **OpenAPI rebuilt programmatically** after the hand-written draft
+  shipped with a brace imbalance and a top-level `securitySchemes` (Ora:
+  "found but failed to parse"). The spec is now generated-checked:
+  23 paths / 24 operations, every operation described, typed responses.
+- **Platform quirks recorded.** (1) The SpaceFast edge 404s static `.md`
+  files from the export, so the root markdown docs are served by
+  generated function routes (`scripts/gen-md-routes.py` builds
+  `functions/*.md.ts` from `public/*.md`). (2) Audit crawlers (Ora)
+  receive HTTP 429s and bot-UA blocks from the edge mid-scan, so
+  external scores under-report the served surface; Ora still moved
+  47 → 55, silicon-friendly ≈ 9/30 → ≈ 23/30 (scorecard in the audit
+  runs directory). Deliberately unbuilt: webhooks, L5 features,
+  Web Bot Auth signatures, and an npm SDK (a publishing decision,
+  not a code gap).

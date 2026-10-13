@@ -125,6 +125,35 @@ docs/                   DECISIONS.md, devpost-draft.md, video-script.md
 | `POST /api/agents/settle` | **policy engine**: re-verifies, authorizes, captures |
 | `GET /api/agents/receipt?outcomeId=` | full audit receipt (JSON download in the UI) |
 | `GET /api/agents/ledger/verify?outcomeId=` | public hash-chain verification |
+| `GET /api/agents/outcomes?status=&q=` | list / filter / search outcomes |
+| `GET /api/search?q=&status=` | search outcomes by goal text |
+| `GET /agent/identity` | validated AgentID identity for a Bearer token |
+| `POST /mcp` | MCP server (13 tools; AgentID Bearer required) |
+
+## Agent surfaces
+
+OutcomePay is built to be used by agents directly — identity, discovery,
+and three transports, all enforcing the same policy gates:
+
+- **Identity — AgentID.** Sign-in is OAuth 2.0 + PKCE via
+  [AgentID](https://auth.agentid.com) at [`/auth`](https://outcomepay.view.fast/auth);
+  agents authorize an AgentMail inbox (see
+  [`auth.md`](https://outcomepay.view.fast/auth.md)). `GET /agent/identity`
+  validates a Bearer token and returns the identity.
+- **Discovery.** [A2A agent card](https://outcomepay.view.fast/.well-known/agent.json),
+  [ARD / AI catalog](https://outcomepay.view.fast/.well-known/ard.json),
+  [agent skills index](https://outcomepay.view.fast/.well-known/agent-skills/index.json),
+  [MCP server card](https://outcomepay.view.fast/.well-known/mcp/server-card.json),
+  [OpenAPI 3.1](https://outcomepay.view.fast/openapi.json),
+  [`llms.txt`](https://outcomepay.view.fast/llms.txt),
+  [protected resource metadata](https://outcomepay.view.fast/.well-known/oauth-protected-resource).
+- **Transports.** REST (below), **MCP** at `POST /mcp` (streamable HTTP,
+  13 tools mirroring the pipeline; AgentID Bearer required), and a
+  zero-dependency **CLI**: `node scripts/outcomepay.mjs run <outcomeId>`.
+- **Safety rails on every transport:** structured errors
+  (`{ok, error, message}`), `Idempotency-Key` support on outcome creation
+  and settle, and documented rate limits. Settlement still requires
+  verification PASS + recorded human approval — no transport bypasses it.
 
 ## Key design decisions
 

@@ -3,7 +3,13 @@
 export function json(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), {
     status,
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      // Documented rate guidance (see /llms.txt): ~60 req/min per client.
+      // Enforcement, when the platform applies it, answers 429 + Retry-After.
+      "RateLimit-Limit": "60",
+      "RateLimit-Policy": "60;w=60",
+    },
   });
 }
 
