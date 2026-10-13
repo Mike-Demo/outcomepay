@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemamap xmlns="http://nlweb.ai/schemamap">
+  <feed>
+    <url>https://outcomepay.view.fast/openapi.json</url>
+    <type>OpenAPI</type>
+    <description>OutcomePay REST API specification — the structured description of every endpoint, request, and response.</description>
+  </feed>
+  <feed>
+    <url>https://outcomepay.view.fast/.well-known/agent.json</url>
+    <type>AgentCard</type>
+    <description>OutcomePay A2A agent card — capabilities, skills, MCP endpoint, and authentication.</description>
+  </feed>
+  <feed>
+    <url>https://outcomepay.view.fast/llms.txt</url>
+    <type>Documentation</type>
+    <description>Machine-readable guide to OutcomePay: pipeline, authentication, API, MCP, CLI, idempotency, rate limits, errors.</description>
+  </feed>
+</schemamap>

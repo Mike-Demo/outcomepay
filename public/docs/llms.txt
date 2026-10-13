@@ -1,0 +1,17 @@
+# OutcomePay documentation index
+
+> Focused index for the documentation section. Start with the [root llms.txt](https://outcomepay.view.fast/llms.txt) for the full guide.
+
+## Pages
+
+- [Documentation](https://outcomepay.view.fast/docs) — the pipeline, REST API table, MCP tools, CLI, idempotency, rate limits, error codes
+- [Developer portal](https://outcomepay.view.fast/developers) — quickstart: publish your first outcome in five calls
+- [About](https://outcomepay.view.fast/about) — what OutcomePay is and who built it
+- [Auth guide](https://outcomepay.view.fast/auth.md) — AgentID sign-in for agents, step by step
+- [Pricing](https://outcomepay.view.fast/pricing.md) — free sandbox prototype, PayPal sandbox only
+
+## Machine-readable
+
+- [OpenAPI spec](https://outcomepay.view.fast/openapi.json)
+- [Agent card](https://outcomepay.view.fast/.well-known/agent.json)
+- [API index (JSON)](https://outcomepay.view.fast/api)

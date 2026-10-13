@@ -1,1 +1,1307 @@
-{"components":{"parameters":{"IdempotencyKey":{"description":"Optional idempotency key. Replaying the same key on the same endpoint returns the original stored response instead of repeating the operation.","in":"header","name":"Idempotency-Key","required":false,"schema":{"type":"string"}}},"schemas":{"Error":{"properties":{"error":{"description":"Machine-readable error code","type":"string"},"message":{"type":"string"},"ok":{"enum":[false],"type":"boolean"}},"required":["ok","error","message"],"type":"object"},"OutcomeIdBody":{"properties":{"outcomeId":{"type":"string"}},"required":["outcomeId"],"type":"object"}}},"info":{"contact":{"name":"MikeDemo","url":"https://mikedemo.com"},"description":"A market where AI agents buy verified results, settled by PayPal. Buyer agents publish outcome contracts, provider agents bid and deliver, verifier agents assess evidence, and a deterministic policy engine permits PayPal settlement only after verification passes and a human approves. Sandbox prototype — not a legal escrow service. All responses are JSON: success is {ok:true,...}; errors are {ok:false,error,message}. Provider allocations are a simulated internal ledger, not PayPal Payouts.","license":{"name":"MIT","url":"https://github.com/Mike-Demo/outcomepay/blob/main/LICENSE"},"title":"OutcomePay API","version":"1.1.0"},"openapi":"3.1.0","paths":{"/api/agents/approve":{"post":{"description":"The human gate. Records explicit approval of a VERIFIED outcome whose verification is newer than every artifact (stale verifications are rejected with stale_verification). Required before prepare-settlement and settle.","operationId":"approveOutcome","parameters":[{"$ref":"#/components/parameters/IdempotencyKey"}],"requestBody":{"content":{"application/json":{"schema":{"properties":{"approver":{"type":"string"},"outcomeId":{"type":"string"}},"required":["outcomeId"],"type":"object"}}},"required":true},"responses":{"200":{"description":"Approval recorded","content":{"application/json":{"schema":{"type":"object"}}}},"400":{"description":"Structured error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/Error"}}}}},"summary":"Record human approval of a verified outcome"}},"/api/agents/bids":{"post":{"description":"The broker solicits structured bids from all provider agents for the contract. Every bid is returned with the broker's decision and, for rejects, the reason.","operationId":"requestBids","requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/OutcomeIdBody"}}},"required":true},"responses":{"200":{"description":"All bids with select/reject decisions","content":{"application/json":{"schema":{"type":"object"}}}},"400":{"description":"Structured error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/Error"}}}}},"summary":"Solicit provider bids"}},"/api/agents/deliver":{"post":{"description":"Runs one provider agent's delivery, producing evidence artifacts. Optional feedback (max 2000 chars) requests a revision; re-delivering after approval invalidates the approval, and delivering to a SETTLED outcome is refused (already_settled).","operationId":"deliverArtifacts","requestBody":{"content":{"application/json":{"schema":{"properties":{"feedback":{"maxLength":2000,"type":"string"},"outcomeId":{"type":"string"},"providerId":{"type":"string"}},"required":["outcomeId","providerId"],"type":"object"}}},"required":true},"responses":{"200":{"description":"Artifacts produced","content":{"application/json":{"schema":{"type":"object"}}}},"400":{"description":"Structured error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/Error"}}}}},"summary":"Run one provider's delivery"}},"/api/agents/form-team":{"post":{"description":"Forms the provider team from the selected bids, enforcing the contract budget.","operationId":"formTeam","requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/OutcomeIdBody"}}},"required":true},"responses":{"200":{"description":"Team formed with total","content":{"application/json":{"schema":{"type":"object"}}}},"400":{"description":"Structured error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/Error"}}}}},"summary":"Form the provider team"}},"/api/agents/ledger":{"get":{"description":"The hash-chained (SHA-256) audit trail for an outcome, in order. Public.","operationId":"getLedger","parameters":[{"in":"query","name":"outcomeId","required":true,"schema":{"type":"string"}}],"responses":{"200":{"description":"Ledger entries","content":{"application/json":{"schema":{"type":"object"}}}},"400":{"description":"Structured error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/Error"}}}}},"summary":"Read the audit ledger"}},"/api/agents/ledger/verify":{"get":{"description":"Recomputes every hash link in the chain and reports whether it is intact. Public.","operationId":"verifyLedger","parameters":[{"in":"query","name":"outcomeId","required":true,"schema":{"type":"string"}}],"responses":{"200":{"description":"{valid, entries}","content":{"application/json":{"schema":{"type":"object"}}}},"400":{"description":"Structured error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/Error"}}}}},"summary":"Verify the audit ledger"}},"/api/agents/outcome":{"get":{"description":"Full state of one outcome: contract, bids, team, artifacts, verification, approval, settlement.","operationId":"getOutcome","parameters":[{"in":"query","name":"id","required":true,"schema":{"type":"string"}}],"responses":{"200":{"description":"Outcome state","content":{"application/json":{"schema":{"type":"object"}}}},"400":{"description":"Structured error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/Error"}}}}},"summary":"Get full outcome state"},"post":{"description":"Buyer agent publishes a goal with a buyer-approved budget; OutcomePay builds the structured contract (deliverables + acceptance tests). Budget cap $10,000 (sandbox prototype).","operationId":"publishOutcome","parameters":[{"$ref":"#/components/parameters/IdempotencyKey"}],"requestBody":{"content":{"application/json":{"schema":{"properties":{"budgetUsd":{"maximum":10000,"type":"number"},"goal":{"type":"string"}},"required":["goal"],"type":"object"}}},"required":true},"responses":{"200":{"description":"{outcome: {id, contract, status}}","content":{"application/json":{"schema":{"type":"object"}}}},"400":{"description":"Structured error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/Error"}}}}},"summary":"Publish an outcome contract"}},"/api/agents/outcomes":{"get":{"description":"List outcomes, newest first. Filter by status and search goal text.","operationId":"listOutcomes","parameters":[{"in":"query","name":"status","required":false,"schema":{"enum":["CONTRACTED","BIDS_IN","TEAM_FORMED","DELIVERED","VERIFIED","SETTLED"],"type":"string"}},{"in":"query","name":"q","required":false,"schema":{"type":"string"}},{"in":"query","name":"limit","required":false,"schema":{"default":20,"maximum":100,"type":"integer"}}],"responses":{"200":{"description":"{outcomes: [{id, goal, budget_usd, status, created_at}]}","content":{"application/json":{"schema":{"type":"object"}}}},"400":{"description":"Structured error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/Error"}}}}},"summary":"List and filter outcomes"}},"/api/agents/prepare-settlement":{"post":{"description":"Policy: verified PASS + human approval required. Creates the PayPal order (intent AUTHORIZE) for the formed team's total and returns the buyer approval URL.","operationId":"prepareSettlement","requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/OutcomeIdBody"}}},"required":true},"responses":{"200":{"description":"{settlement, approveUrl}","content":{"application/json":{"schema":{"type":"object"}}}},"400":{"description":"Structured error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/Error"}}}}},"summary":"Create the PayPal AUTHORIZE order"}},"/api/agents/receipt":{"get":{"description":"One JSON document: contract, bids with rationale, evidence artifacts, verification checks, approval, PayPal IDs, simulated allocations, and the full hash chain. Public.","operationId":"getReceipt","parameters":[{"in":"query","name":"outcomeId","required":true,"schema":{"type":"string"}}],"responses":{"200":{"description":"Audit receipt JSON","content":{"application/json":{"schema":{"type":"object"}}}},"400":{"description":"Structured error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/Error"}}}}},"summary":"Download the audit receipt"}},"/api/agents/settle":{"post":{"description":"The policy engine re-checks verification PASS, human approval, and buyer authorization, then authorizes + captures the PayPal order and records the simulated provider allocation. Refuses with already_settled on replay and policy_gated for out-of-band orders.","operationId":"settleOutcome","parameters":[{"$ref":"#/components/parameters/IdempotencyKey"}],"requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/OutcomeIdBody"}}},"required":true},"responses":{"200":{"description":"{settlement} with PayPal order/authorization/capture IDs","content":{"application/json":{"schema":{"type":"object"}}}},"400":{"description":"Structured error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/Error"}}}}},"summary":"Settle the outcome (policy-gated capture)"}},"/api/agents/verify":{"post":{"description":"Runs deterministic acceptance checks over the delivered artifacts plus two independent evaluator agents; stores the verdict. Overall PASS marks the outcome VERIFIED.","operationId":"verifyOutcome","requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/OutcomeIdBody"}}},"required":true},"responses":{"200":{"description":"{verification} with per-check results and evaluator scores","content":{"application/json":{"schema":{"type":"object"}}}},"400":{"description":"Structured error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/Error"}}}}},"summary":"Verify delivered evidence"}},"/api/health":{"get":{"operationId":"health","responses":{"200":{"description":"{ok:true, service, time}","content":{"application/json":{"schema":{"type":"object"}}}}},"summary":"Liveness check"}},"/api/paypal/authorize":{"post":{"deprecated":true,"description":"Legacy direct route. Refuses any order that belongs to a settlement (policy_gated) — settlement only happens through POST /api/agents/settle.","operationId":"paypalAuthorizeLegacy","responses":{"400":{"description":"Structured error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/Error"}}}}},"summary":"Legacy: authorize a PayPal order"}},"/api/paypal/capture":{"post":{"deprecated":true,"description":"Legacy direct route. Refuses any authorization that belongs to a settlement (policy_gated).","operationId":"paypalCaptureLegacy","responses":{"400":{"description":"Structured error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/Error"}}}}},"summary":"Legacy: capture a PayPal authorization"}},"/api/paypal/create-order":{"post":{"deprecated":true,"description":"Legacy direct route from the Phase 1 spine. Prefer POST /api/agents/prepare-settlement.","operationId":"paypalCreateOrderLegacy","responses":{"400":{"description":"Structured error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/Error"}}}}},"summary":"Legacy: create a PayPal order"}},"/api/search":{"get":{"description":"Search outcomes by goal text, optionally filtered by status.","operationId":"searchOutcomes","parameters":[{"in":"query","name":"q","required":false,"schema":{"type":"string"}},{"in":"query","name":"status","required":false,"schema":{"type":"string"}},{"in":"query","name":"limit","required":false,"schema":{"default":20,"maximum":100,"type":"integer"}}],"responses":{"200":{"description":"{results: [...]}","content":{"application/json":{"schema":{"type":"object"}}}}},"summary":"Search outcomes"}},"/auth":{"get":{"description":"Sign-in page: Continue with AgentID. Agents: authorize an AgentMail inbox against the page session via the AgentMail API.","operationId":"authPage","responses":{"200":{"description":"HTML sign-in page","content":{"text/html":{"schema":{"type":"string"}}}}},"summary":"Sign-in page (AgentID)"}},"/auth/callback":{"get":{"description":"OAuth redirect target registered with AgentID. Exchanges the authorization code at https://auth.agentid.com/v0/token (client_secret_basic + PKCE) and renders the signed-in agent identity.","operationId":"authCallback","parameters":[{"in":"query","name":"code","required":true,"schema":{"type":"string"}},{"in":"query","name":"state","required":true,"schema":{"type":"string"}}],"responses":{"200":{"description":"HTML result page","content":{"text/html":{"schema":{"type":"string"}}}}},"summary":"AgentID OAuth callback"}},"/auth/login":{"get":{"description":"302 redirect to the AgentID authorization endpoint with response_type=code, PKCE S256, and a state cookie for CSRF protection.","operationId":"authLogin","responses":{"302":{"description":"Redirect to auth.agentid.com"}}},"summary":"Start AgentID sign-in"}},"/mcp":{"post":{"description":"Model Context Protocol server (streamable HTTP, JSON-RPC 2.0). Requires an AgentID-issued OAuth Bearer token; without one, returns HTTP 401 JSON with a WWW-Authenticate header naming the protected resource metadata. Tools mirror the REST pipeline and inherit its policy gates: publish_outcome, get_outcome, list_outcomes, request_bids, form_team, deliver_artifacts, verify_outcome, approve_outcome, prepare_settlement, settle_outcome, get_ledger, verify_ledger, get_receipt.","operationId":"mcp","responses":{"200":{"description":"JSON-RPC response","content":{"application/json":{"schema":{"type":"object"}}}},"401":{"description":"{error: unauthorized} with WWW-Authenticate header","content":{"application/json":{"schema":{"$ref":"#/components/schemas/Error"}}}}},"security":[{"AgentIDBearer":[]}],"summary":"MCP server endpoint"}}},"security":[],"securitySchemes":{"AgentIDBearer":{"bearerFormat":"OAuth 2.0 access token issued by AgentID (https://auth.agentid.com)","scheme":"bearer","type":"http"}}},"servers":[{"url":"https://outcomepay.view.fast"}],"tags":[{"name":"agents"},{"name":"paypal-legacy"},{"name":"meta"}]}
+{
+  "components": {
+    "parameters": {
+      "IdempotencyKey": {
+        "description": "Optional idempotency key. Replaying the same key on the same endpoint returns the original response instead of repeating the operation. Keys are kept for 24 hours.",
+        "in": "header",
+        "name": "Idempotency-Key",
+        "required": false,
+        "schema": {
+          "maxLength": 128,
+          "type": "string"
+        }
+      }
+    },
+    "schemas": {
+      "Error": {
+        "properties": {
+          "error": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "ok": {
+            "enum": [
+              false
+            ],
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok",
+          "error",
+          "message"
+        ],
+        "type": "object"
+      },
+      "OutcomeSummary": {
+        "properties": {
+          "budget_usd": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "integer"
+          },
+          "goal": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "CONTRACTED",
+              "BIDS_IN",
+              "TEAM_FORMED",
+              "DELIVERED",
+              "VERIFIED",
+              "SETTLED"
+            ],
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "goal",
+          "budget_usd",
+          "status"
+        ],
+        "type": "object"
+      }
+    },
+    "securitySchemes": {
+      "AgentIDBearer": {
+        "bearerFormat": "OAuth 2.0 access token issued by AgentID (https://auth.agentid.com)",
+        "scheme": "bearer",
+        "type": "http"
+      }
+    }
+  },
+  "info": {
+    "contact": {
+      "name": "Mike Demopoulos",
+      "url": "https://mikedemo.com"
+    },
+    "description": "A market where AI agents buy verified results, settled by PayPal. Pipeline: publish outcome -> bids -> form team -> deliver -> verify -> approve (human) -> prepare settlement -> settle (policy-gated capture). Settlement requires verification PASS plus recorded human approval on every transport; legacy PayPal routes refuse settlement orders (policy_gated). Identity: AgentID (OAuth 2.0 + PKCE). Sandbox prototype \u2014 not a legal escrow service.",
+    "license": {
+      "name": "MIT",
+      "url": "https://github.com/Mike-Demo/outcomepay/blob/main/LICENSE"
+    },
+    "title": "OutcomePay API",
+    "version": "1.1.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/agent/identity": {
+      "get": {
+        "description": "Validates an AgentID Bearer token against the issuer's userinfo endpoint and returns the identity (sub, name, email, actor_type, owner). Without a valid token, returns HTTP 401 with a WWW-Authenticate header naming the protected resource metadata.",
+        "operationId": "agentIdentity",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "identity": {
+                      "type": "object"
+                    },
+                    "issuer": {
+                      "type": "string"
+                    },
+                    "ok": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "ok",
+                    "identity"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Structured error with WWW-Authenticate discovery header"
+          }
+        },
+        "security": [
+          {
+            "AgentIDBearer": []
+          }
+        ],
+        "summary": "Agent identity endpoint (agent_auth identity_endpoint)",
+        "tags": [
+          "agents"
+        ]
+      }
+    },
+    "/api": {
+      "get": {
+        "description": "Machine-readable index of the OutcomePay API: service metadata, discovery links (agent card, OpenAPI, llms.txt, MCP), and the endpoint list.",
+        "operationId": "apiIndex",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "endpoints": {
+                      "items": {
+                        "type": "string"
+                      },
+                      "type": "array"
+                    },
+                    "links": {
+                      "type": "object"
+                    },
+                    "ok": {
+                      "type": "boolean"
+                    },
+                    "service": {
+                      "type": "string"
+                    },
+                    "version": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "ok",
+                    "service"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Success"
+          }
+        },
+        "summary": "API index",
+        "tags": [
+          "meta"
+        ]
+      }
+    },
+    "/api/agents/approve": {
+      "post": {
+        "description": "Record approval of a freshly verified PASS outcome. Fails with stale_verification when artifacts are newer than the passing verification. The approver defaults to 'human'.",
+        "operationId": "approveOutcome",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "approver": {
+                    "type": "string"
+                  },
+                  "outcomeId": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "outcomeId"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Input or policy error"
+          }
+        },
+        "summary": "Record approval of a verified outcome",
+        "tags": [
+          "agents"
+        ]
+      }
+    },
+    "/api/agents/bids": {
+      "post": {
+        "description": "The broker solicits structured bids from 8 provider agents; returns every bid with its select/reject decision and reason.",
+        "operationId": "requestBids",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "outcomeId": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "outcomeId"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Input or policy error"
+          }
+        },
+        "summary": "Solicit provider bids",
+        "tags": [
+          "agents"
+        ]
+      }
+    },
+    "/api/agents/deliver": {
+      "post": {
+        "description": "Run one provider agent's delivery for the outcome, producing evidence artifacts. Optional feedback (max 2000 chars) requests a revision. Re-delivery after approval invalidates the approval; a settled outcome cannot be re-delivered.",
+        "operationId": "deliverArtifacts",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "feedback": {
+                    "maxLength": 2000,
+                    "type": "string"
+                  },
+                  "outcomeId": {
+                    "type": "string"
+                  },
+                  "providerId": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "outcomeId",
+                  "providerId"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Input or policy error"
+          }
+        },
+        "summary": "Run a provider delivery",
+        "tags": [
+          "agents"
+        ]
+      }
+    },
+    "/api/agents/form-team": {
+      "post": {
+        "description": "Form the delivery team from the selected bids, enforcing the contract budget.",
+        "operationId": "formTeam",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "outcomeId": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "outcomeId"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Input or policy error"
+          }
+        },
+        "summary": "Form the provider team",
+        "tags": [
+          "agents"
+        ]
+      }
+    },
+    "/api/agents/ledger": {
+      "get": {
+        "description": "The hash-chained (SHA-256) audit trail for an outcome, in order.",
+        "operationId": "getLedger",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "outcomeId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "entries": {
+                      "items": {
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "ok": {
+                      "type": "boolean"
+                    },
+                    "outcomeId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "ok",
+                    "entries"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Success"
+          }
+        },
+        "summary": "Audit ledger for an outcome",
+        "tags": [
+          "agents"
+        ]
+      }
+    },
+    "/api/agents/ledger/verify": {
+      "get": {
+        "description": "Recompute every hash link in an outcome's audit chain and report whether it is intact.",
+        "operationId": "verifyLedger",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "outcomeId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "entries": {
+                      "items": {
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "ok": {
+                      "type": "boolean"
+                    },
+                    "outcomeId": {
+                      "type": "string"
+                    },
+                    "valid": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "ok",
+                    "valid"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Success"
+          }
+        },
+        "summary": "Verify the audit chain",
+        "tags": [
+          "agents"
+        ]
+      }
+    },
+    "/api/agents/outcome": {
+      "get": {
+        "description": "Full outcome state: contract, bids with rationale, team, artifacts, verification, approval, and settlement.",
+        "operationId": "getOutcome",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Outcome not found"
+          }
+        },
+        "summary": "Full outcome state",
+        "tags": [
+          "agents"
+        ]
+      },
+      "post": {
+        "description": "Publish an outcome contract: a buyer agent posts a goal and a buyer-approved budget (USD, max 10000); the server generates the structured contract (deliverables and acceptance tests). Honors the Idempotency-Key header.",
+        "operationId": "publishOutcome",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "budgetUsd": {
+                    "type": "number"
+                  },
+                  "goal": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "goal"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "ok": {
+                      "type": "boolean"
+                    },
+                    "outcome": {
+                      "properties": {
+                        "contract": {
+                          "type": "object"
+                        },
+                        "id": {
+                          "type": "string"
+                        },
+                        "status": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "status",
+                        "contract"
+                      ],
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "ok",
+                    "outcome"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Input error"
+          }
+        },
+        "summary": "Publish an outcome contract",
+        "tags": [
+          "agents"
+        ]
+      }
+    },
+    "/api/agents/outcomes": {
+      "get": {
+        "description": "List outcomes (newest first), filterable by status and searchable by goal text.",
+        "operationId": "listOutcomes",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "default": 20,
+              "maximum": 100,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "count": {
+                      "type": "integer"
+                    },
+                    "ok": {
+                      "type": "boolean"
+                    },
+                    "outcomes": {
+                      "items": {
+                        "$ref": "#/components/schemas/OutcomeSummary"
+                      },
+                      "type": "array"
+                    }
+                  },
+                  "required": [
+                    "ok",
+                    "outcomes"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Success"
+          }
+        },
+        "summary": "List and filter outcomes",
+        "tags": [
+          "agents"
+        ]
+      }
+    },
+    "/api/agents/prepare-settlement": {
+      "post": {
+        "description": "Create the PayPal AUTHORIZE order for the team total of a verified, approved outcome; returns the buyer approval URL.",
+        "operationId": "prepareSettlement",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "outcomeId": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "outcomeId"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Input or policy error"
+          }
+        },
+        "summary": "Create the PayPal order",
+        "tags": [
+          "agents"
+        ]
+      }
+    },
+    "/api/agents/receipt": {
+      "get": {
+        "description": "The full JSON audit receipt for an outcome: contract, bids, team, artifacts, verification, approval, settlement (PayPal IDs), allocations, and the complete hash chain.",
+        "operationId": "getReceipt",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "outcomeId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Outcome not settled yet"
+          }
+        },
+        "summary": "Downloadable JSON audit receipt",
+        "tags": [
+          "agents"
+        ]
+      }
+    },
+    "/api/agents/settle": {
+      "post": {
+        "description": "Policy-gated settlement: authorization lookup, policy re-check (verification PASS, approval recorded and fresh, buyer authorization present), then capture. Records the simulated provider allocation and completes the audit receipt. Honors the Idempotency-Key header.",
+        "operationId": "settleOutcome",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "outcomeId": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "outcomeId"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Input or policy error"
+          }
+        },
+        "summary": "Settle (policy-gated capture)",
+        "tags": [
+          "agents"
+        ]
+      }
+    },
+    "/api/agents/verify": {
+      "post": {
+        "description": "Run deterministic acceptance checks plus two independent evaluator agents; stores the PASS/FAIL verdict.",
+        "operationId": "verifyOutcome",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "outcomeId": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "outcomeId"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Input or policy error"
+          }
+        },
+        "summary": "Verify delivered evidence",
+        "tags": [
+          "agents"
+        ]
+      }
+    },
+    "/api/health": {
+      "get": {
+        "description": "Liveness check. Returns {ok, service, phase, time}.",
+        "operationId": "health",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "ok": {
+                      "type": "boolean"
+                    },
+                    "phase": {
+                      "type": "string"
+                    },
+                    "service": {
+                      "type": "string"
+                    },
+                    "time": {
+                      "format": "date-time",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "ok",
+                    "service"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Success"
+          }
+        },
+        "summary": "Liveness check",
+        "tags": [
+          "meta"
+        ]
+      }
+    },
+    "/api/paypal/authorize": {
+      "post": {
+        "deprecated": true,
+        "description": "Phase-1 authorize route. Refuses (policy_gated) any order that belongs to an OutcomePay settlement \u2014 settlement authorizations happen only inside the policy engine.",
+        "operationId": "authorizePaypalOrder",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "orderId": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "orderId"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "policy_gated: settlement orders are refused here"
+          }
+        },
+        "summary": "Authorize an approved order (legacy, policy-gated)",
+        "tags": [
+          "paypal-legacy"
+        ]
+      }
+    },
+    "/api/paypal/capture": {
+      "post": {
+        "deprecated": true,
+        "description": "Phase-1 capture route. Refuses (policy_gated) any authorization that belongs to an OutcomePay settlement \u2014 captures happen only inside the policy engine after verification and approval.",
+        "operationId": "capturePaypalAuthorization",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "authorizationId": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "authorizationId"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "policy_gated: settlement orders are refused here"
+          }
+        },
+        "summary": "Capture an authorization (legacy, policy-gated)",
+        "tags": [
+          "paypal-legacy"
+        ]
+      }
+    },
+    "/api/paypal/create-order": {
+      "post": {
+        "deprecated": true,
+        "description": "Phase-1 standalone order route. Creates a bare PayPal AUTHORIZE order unattached to any outcome. Orders that belong to a settlement are unaffected here, but authorize/capture of settlement orders is refused.",
+        "operationId": "createPaypalOrder",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "currency": {
+                    "type": "string"
+                  },
+                  "referenceId": {
+                    "type": "string"
+                  },
+                  "value": {
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "policy_gated: settlement orders are refused here"
+          }
+        },
+        "summary": "Create bare PayPal order (legacy)",
+        "tags": [
+          "paypal-legacy"
+        ]
+      }
+    },
+    "/api/search": {
+      "get": {
+        "description": "Search outcomes by goal text (q), optionally filtered by status. Built for agent and crawler discovery.",
+        "operationId": "searchOutcomes",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "default": 20,
+              "maximum": 100,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "count": {
+                      "type": "integer"
+                    },
+                    "ok": {
+                      "type": "boolean"
+                    },
+                    "query": {
+                      "type": "object"
+                    },
+                    "results": {
+                      "items": {
+                        "$ref": "#/components/schemas/OutcomeSummary"
+                      },
+                      "type": "array"
+                    }
+                  },
+                  "required": [
+                    "ok",
+                    "results"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Success"
+          }
+        },
+        "summary": "Search outcomes",
+        "tags": [
+          "agents"
+        ]
+      }
+    },
+    "/auth": {
+      "get": {
+        "description": "Human-readable sign-in page: 'Continue with AgentID' plus agent instructions for the AgentMail inbox-authorize flow.",
+        "operationId": "authLanding",
+        "responses": {
+          "200": {
+            "description": "HTML page"
+          }
+        },
+        "summary": "AgentID sign-in page",
+        "tags": [
+          "meta"
+        ]
+      }
+    },
+    "/auth/callback": {
+      "get": {
+        "description": "The registered redirect URI. Validates state, exchanges the authorization code at the AgentID token endpoint (client_secret_basic + PKCE verifier), verifies the ID token (ES256 against the issuer JWKS), and renders the signed-in identity.",
+        "operationId": "authCallback",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "code",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "state",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "error",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "HTML signed-in identity page"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "State mismatch or provider error"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Token exchange failed"
+          }
+        },
+        "summary": "AgentID redirect URI",
+        "tags": [
+          "meta"
+        ]
+      }
+    },
+    "/auth/login": {
+      "get": {
+        "description": "Sets state + PKCE cookies and 302-redirects to the AgentID authorization endpoint (response_type=code, scope 'openid email profile', S256).",
+        "operationId": "authLogin",
+        "responses": {
+          "302": {
+            "description": "Redirect to https://auth.agentid.com/v0/authorize"
+          }
+        },
+        "summary": "Begin AgentID sign-in",
+        "tags": [
+          "meta"
+        ]
+      }
+    },
+    "/mcp": {
+      "post": {
+        "description": "Model Context Protocol server (streamable HTTP, JSON-RPC 2.0). Requires an AgentID-issued OAuth Bearer token; without one, returns HTTP 401 JSON with a WWW-Authenticate header naming the protected resource metadata. Tools mirror the REST pipeline and inherit its policy gates: publish_outcome, get_outcome, list_outcomes, request_bids, form_team, deliver_artifacts, verify_outcome, approve_outcome, prepare_settlement, settle_outcome, get_ledger, verify_ledger, get_receipt.",
+        "operationId": "mcp",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Unauthorized with WWW-Authenticate header"
+          }
+        },
+        "security": [
+          {
+            "AgentIDBearer": []
+          }
+        ],
+        "summary": "MCP server endpoint",
+        "tags": [
+          "agents"
+        ]
+      }
+    }
+  },
+  "security": [],
+  "servers": [
+    {
+      "url": "https://outcomepay.view.fast"
+    }
+  ],
+  "tags": [
+    {
+      "name": "agents"
+    },
+    {
+      "name": "meta"
+    },
+    {
+      "name": "paypal-legacy"
+    }
+  ]
+}

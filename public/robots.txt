@@ -4,3 +4,4 @@ User-agent: *
 Allow: /
 
 Sitemap: https://outcomepay.view.fast/sitemap.xml
+schemamap: https://outcomepay.view.fast/schemamap.xml

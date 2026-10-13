@@ -2,8 +2,9 @@
 
 /**
  * WebMCP (Model Context Protocol for the web) registration.
- * When the browser exposes navigator.modelContext, register OutcomePay's
- * read tools so browser agents can call them natively. No-op elsewhere.
+ * When the browser exposes document.modelContext (preferred) or
+ * navigator.modelContext (compat fallback), register OutcomePay's read
+ * tools so browser agents can call them natively. No-op elsewhere.
  */
 import { useEffect } from "react";
 
@@ -16,9 +17,9 @@ async function callApi(path: string): Promise<unknown> {
 
 export default function WebMcp() {
   useEffect(() => {
-    const mc = (navigator as unknown as { modelContext?: unknown }).modelContext as
-      | { registerTool?: (tool: unknown) => void }
-      | undefined;
+    const docMc = (document as unknown as { modelContext?: unknown }).modelContext;
+    const navMc = (navigator as unknown as { modelContext?: unknown }).modelContext;
+    const mc = (docMc ?? navMc) as { registerTool?: (tool: unknown) => void } | undefined;
     if (!mc || typeof mc.registerTool !== "function") return;
     const tools = [
       {

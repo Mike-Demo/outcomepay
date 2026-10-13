@@ -135,6 +135,13 @@ export default function CommandCenter() {
         <span className="muted">built by Mike Demopoulos (solo)</span>
         <br />
         <span className="muted">Sandbox prototype — not a legal escrow service.</span>
+        <br />
+        <span className="muted">
+          <a href="/docs">Docs</a> · <a href="/developers">Developers</a> ·{" "}
+          <a href="/openapi.json">API spec</a> · <a href="/llms.txt">llms.txt</a> ·{" "}
+          <a href="/.well-known/agent.json">Agent card</a> ·{" "}
+          <a href="https://github.com/Mike-Demo/outcomepay">GitHub</a>
+        </span>
       </footer>
     </main>
   );
