@@ -97,10 +97,10 @@ const TOOLS: ToolDef[] = [
     description:
       "Record approval of a freshly verified PASS outcome. The approver is recorded as the authenticated AgentID identity — the human gate still applies: no approval, no settlement.",
     inputSchema: obj(ID, ["outcomeId"]),
-    rest: (a, ctx) => ({
+    rest: (a) => ({
       method: "POST",
       path: "/api/agents/approve",
-      body: { outcomeId: a.outcomeId, approver: `agentid:${ctx.user.email ?? ctx.user.sub}` },
+      body: { outcomeId: a.outcomeId },
     }),
   },
   {
@@ -182,9 +182,16 @@ async function callTool(
 ): Promise<Response> {
   const origin = new URL(request.url).origin;
   const spec = tool.rest(args, { user });
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  // Approvals are identity-bound: forward the caller's AgentID token so the
+  // REST endpoint derives the approver from the verified identity itself.
+  if (tool.name === "approve_outcome") {
+    const auth = request.headers.get("Authorization");
+    if (auth) headers["Authorization"] = auth;
+  }
   const res = await fetch(`${origin}${spec.path}`, {
     method: spec.method,
-    headers: { "Content-Type": "application/json" },
+    headers,
     body: spec.body !== undefined ? JSON.stringify(spec.body) : undefined,
   });
   const data = (await res.json().catch(() => ({ ok: false, error: "bad_upstream", message: "Upstream returned non-JSON." }))) as Record<string, unknown>;

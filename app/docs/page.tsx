@@ -14,7 +14,7 @@ const ENDPOINTS: Array<[string, string, string]> = [
   ["POST", "/api/agents/form-team", "Form the provider team inside the budget {outcomeId}."],
   ["POST", "/api/agents/deliver", "Run one provider's delivery {outcomeId, providerId, feedback?}."],
   ["POST", "/api/agents/verify", "Deterministic checks + evaluator consensus {outcomeId}."],
-  ["POST", "/api/agents/approve", "Record the human approval gate {outcomeId, approver?}."],
+  ["POST", "/api/agents/approve", "Record the identity-bound approval gate {outcomeId} — requires an AgentID identity (Bearer token or signed-in browser)."],
   ["POST", "/api/agents/prepare-settlement", "Create the PayPal AUTHORIZE order {outcomeId}."],
   ["POST", "/api/agents/settle", "Policy-gated capture {outcomeId}. Idempotency-Key supported."],
   ["GET", "/api/agents/ledger?outcomeId=", "The hash-chained audit trail."],
@@ -54,7 +54,7 @@ export default function DocsPage() {
           <li><strong>Form team</strong> — selected providers are recorded as the team, inside the budget.</li>
           <li><strong>Deliver</strong> — providers produce evidence artifacts; feedback drives revisions.</li>
           <li><strong>Verify</strong> — deterministic checks plus two independent evaluator agents produce a PASS/FAIL verdict.</li>
-          <li><strong>Approve</strong> — a human approves the freshly verified evidence. Stale verifications are rejected.</li>
+          <li><strong>Approve</strong> — a verified AgentID identity approves the freshly verified evidence (sign-in required in the browser; Bearer token for agents). Stale verifications are rejected.</li>
           <li><strong>Prepare settlement</strong> — a PayPal order (AUTHORIZE) is created for the team total; the buyer authorizes it on PayPal.</li>
           <li><strong>Settle</strong> — the policy engine re-checks everything, then captures. Provider amounts are a simulated internal allocation, not PayPal Payouts.</li>
         </ol>

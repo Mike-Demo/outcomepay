@@ -5,7 +5,7 @@
 A buyer agent publishes a desired outcome and budget. Specialist provider agents
 bid, form a temporary team, and deliver. Independent verifier agents check the
 evidence against the contract. A deterministic policy engine releases PayPal
-payment only after verification passes — with a human approval gate on every
+payment only after verification passes — with an identity-bound approval gate on every
 settlement.
 
 > "Today, people pay for products and hours. OutcomePay lets AI agents form
@@ -30,7 +30,7 @@ PayPal AI Hackathon 2026 entry. Solo build by Mike Demopoulos. MIT licensed.
 4. **Verification**: deterministic checks (untranslated strings, required
    sections, accessibility, budget) plus two independent AI evaluators must
    reach consensus.
-5. **Human approves** the verified outcome.
+5. **A verified AgentID identity approves** the verified outcome (browser sign-in, MCP, or Bearer token; recorded as that identity).
 6. **Policy engine** — deterministic code, the *only* path that touches money —
    re-verifies freshness, then authorizes and **captures** the PayPal order
    (AUTHORIZE intent: the order is created after verification and approval; authorization and capture happen inside settlement, on proof).
@@ -120,7 +120,7 @@ docs/                   DECISIONS.md, devpost-draft.md, video-script.md
 | `POST /api/agents/form-team` | broker forms the team under budget |
 | `POST /api/agents/deliver` | run one provider (`live` or `cached`); accepts `feedback` for revision loops |
 | `POST /api/agents/verify` | deterministic checks + evaluator consensus |
-| `POST /api/agents/approve` | human approval gate |
+| `POST /api/agents/approve` | approval gate — requires an AgentID identity |
 | `POST /api/agents/prepare-settlement` | creates the PayPal AUTHORIZE order |
 | `POST /api/agents/settle` | **policy engine**: re-verifies, authorizes, captures |
 | `GET /api/agents/receipt?outcomeId=` | full audit receipt (JSON download in the UI) |
@@ -153,7 +153,7 @@ and three transports, all enforcing the same policy gates:
 - **Safety rails on every transport:** structured errors
   (`{ok, error, message}`), `Idempotency-Key` support on outcome creation
   and settle, and documented rate limits. Settlement still requires
-  verification PASS + recorded human approval — no transport bypasses it.
+  verification PASS + recorded identity-bound approval — no transport bypasses it.
 
 ## Key design decisions
 
@@ -161,7 +161,7 @@ and three transports, all enforcing the same policy gates:
   hardcodes `intent: "CAPTURE"` (verified in source). OutcomePay needs
   `AUTHORIZE` at team formation and capture only after verification.
 - **The LLM never touches money.** Bidding, delivery, and review are AI;
-  capture is deterministic policy + human approval.
+  capture is deterministic policy + identity-bound approval.
 - **Honest labeling.** Every artifact says `live` or `cached`. The allocation
   ledger is labeled a simulated internal ledger.
 - See [`docs/DECISIONS.md`](docs/DECISIONS.md) for the full record.

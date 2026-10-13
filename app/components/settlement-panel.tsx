@@ -6,7 +6,7 @@ import AllocationGrid from "./allocation-grid";
 
 /**
  * Right-column: the settlement flow.
- * verify → human approves → settlement order → buyer approves at PayPal
+ * verify → AgentID identity approves → settlement order → buyer approves at PayPal
  * → policy engine settles (the ONLY path that captures).
  */
 export default function SettlementPanel({
@@ -18,6 +18,7 @@ export default function SettlementPanel({
 }) {
   const [state, setState] = useState<OutcomeStateView | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const [session, setSession] = useState<{ signed_in: boolean; email?: string | null } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [approveUrl, setApproveUrl] = useState<string | null>(null);
   const [receipt, setReceipt] = useState<any | null>(null);
@@ -51,6 +52,15 @@ export default function SettlementPanel({
   useEffect(() => {
     void fetchState();
   }, [fetchState]);
+
+  // Approvals are identity-bound: check the browser's AgentID session so
+  // the approve control can ask for sign-in instead of failing with a 401.
+  useEffect(() => {
+    fetch("/auth/session")
+      .then((r) => r.json())
+      .then((d) => setSession(d as { signed_in: boolean; email?: string | null }))
+      .catch(() => setSession({ signed_in: false }));
+  }, []);
 
   const run = async (label: string, fn: () => Promise<void>) => {
     setBusy(label);
@@ -156,13 +166,26 @@ export default function SettlementPanel({
           </span>
         </li>
         <li className={approved ? "done" : ""}>
-          <strong>Human approval</strong>
+          <strong>Approval</strong>
           {approved ? (
-            <span className="muted"> approved</span>
+            <span className="muted">
+              {" "}
+              approved
+              {(state?.approval as { approver?: string } | undefined)?.approver
+                ? ` by ${(state?.approval as { approver?: string }).approver}`
+                : ""}
+            </span>
+          ) : session && !session.signed_in ? (
+            <a className="btn btn-sm" href="/auth/login">
+              Sign in with AgentID to approve
+            </a>
           ) : (
             <button className="btn btn-sm" onClick={approveOutcome} disabled={!verified || busy !== null}>
               {busy === "approve" ? "Approving…" : "Approve verified outcome"}
             </button>
+          )}
+          {!approved && session?.signed_in && (
+            <span className="muted"> as {session.email ?? "your AgentID identity"}</span>
           )}
         </li>
         <li className={state?.settlement ? "done" : ""}>

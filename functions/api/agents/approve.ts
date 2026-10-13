@@ -9,10 +9,18 @@ import {
   replaceApproval,
 } from "../../_core/db";
 import { appendLedger } from "../../_core/ledger";
+import { identityFromRequest } from "../../_core/agentid";
 
 /**
- * POST /api/agents/approve — the human gate. Records explicit human approval
- * of a VERIFIED outcome. Required before the policy engine will settle.
+ * POST /api/agents/approve — the approval gate. Records approval of a
+ * VERIFIED outcome; required before the policy engine will settle.
+ *
+ * IDENTITY-BOUND (Demo's decision after the Copilot validation): the
+ * caller must present a verified AgentID identity — an AgentID Bearer
+ * access token (agents, MCP, CLI) or the signed browser session set by
+ * /auth/callback after a verified sign-in. The recorded approver is
+ * derived from that identity (agentid:<email|sub>); a caller-supplied
+ * approver string is never trusted. No identity → 401 identity_required.
  * Body: { outcomeId: string }
  */
 export const POST = withErrors(async (request: Request, env: Record<string, unknown>) => {
@@ -25,6 +33,28 @@ export const POST = withErrors(async (request: Request, env: Record<string, unkn
   }
   const outcomeId = String(body?.outcomeId ?? "").trim();
   if (!outcomeId) throw new InputError("missing_id", "Body must include outcomeId.");
+
+  const origin = new URL(request.url).origin;
+  const identity = await identityFromRequest(request, env, origin);
+  if (!identity) {
+    return new Response(
+      JSON.stringify({
+        ok: false,
+        error: "identity_required",
+        message:
+          "Approvals are bound to a verified AgentID identity. Send an AgentID access token in the Authorization header, or sign in at /auth in this browser first.",
+      }),
+      {
+        status: 401,
+        headers: {
+          "Content-Type": "application/json",
+          "WWW-Authenticate": `Bearer resource_metadata="${origin}/.well-known/oauth-protected-resource"`,
+          "RateLimit-Limit": "60",
+          "RateLimit-Policy": "60;w=60",
+        },
+      }
+    );
+  }
 
   const db = await getDb(env);
   if (!db) throw new InputError("no_database", "Database not configured on this space.");
@@ -47,14 +77,19 @@ export const POST = withErrors(async (request: Request, env: Record<string, unkn
       "Artifacts changed after the last verification — re-run verification before approving."
     );
   }
-  const approver =
-    typeof body?.approver === "string" && body.approver.trim()
-      ? body.approver.trim().slice(0, 120)
-      : "human";
+  const approver = identity.approver;
   const approvalId = await replaceApproval(db, outcomeId, approver);
   await appendLedger(db, outcomeId, "approval.recorded", {
     approver,
+    via: identity.via,
     verification_id: verification.id,
   });
-  return json({ ok: true, approvalId, approvedAt: new Date().toISOString(), verificationId: verification.id });
+  return json({
+    ok: true,
+    approvalId,
+    approver,
+    via: identity.via,
+    approvedAt: new Date().toISOString(),
+    verificationId: verification.id,
+  });
 });

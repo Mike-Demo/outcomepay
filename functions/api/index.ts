@@ -28,7 +28,7 @@ export const GET = withErrors(async (request: Request) => {
       "POST /api/agents/form-team",
       "POST /api/agents/deliver",
       "POST /api/agents/verify",
-      "POST /api/agents/approve",
+      "POST /api/agents/approve (requires an AgentID identity)",
       "POST /api/agents/prepare-settlement",
       "POST /api/agents/settle",
       "GET /api/agents/ledger?outcomeId=",

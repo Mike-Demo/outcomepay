@@ -14,7 +14,7 @@
  *   outcomepay team <outcomeId>
  *   outcomepay deliver <outcomeId> <providerId> [--feedback "..."]
  *   outcomepay verify <outcomeId>
- *   outcomepay approve <outcomeId> [--approver name]
+ *   outcomepay approve <outcomeId>          (needs OUTCOMEPAY_MCP_TOKEN — approvals are identity-bound)
  *   outcomepay prepare <outcomeId>
  *   outcomepay settle <outcomeId>
  *   outcomepay run <outcomeId>            bids -> team -> deliver all -> verify
@@ -39,6 +39,10 @@ function fail(message) {
 async function api(method, path, body) {
   const headers = { "Content-Type": "application/json" };
   if (method === "POST") headers["Idempotency-Key"] = randomUUID();
+  // Approvals are identity-bound: send the AgentID access token when present.
+  if (path === "/api/agents/approve" && process.env.OUTCOMEPAY_MCP_TOKEN) {
+    headers["Authorization"] = `Bearer ${process.env.OUTCOMEPAY_MCP_TOKEN}`;
+  }
   const res = await fetch(`${BASE}${path}`, {
     method,
     headers,
@@ -134,7 +138,7 @@ async function main() {
     case "approve": {
       if (!sub) fail("approve needs an outcomeId");
       return print(
-        await api("POST", "/api/agents/approve", { outcomeId: sub, approver: flag(args, "--approver") })
+        await api("POST", "/api/agents/approve", { outcomeId: sub })
       );
     }
     case "prepare":
@@ -175,7 +179,8 @@ async function main() {
       console.log(`Sign in with AgentID: ${BASE}/auth`);
       console.log("Agents: follow the redirect from /auth/login and authorize your AgentMail inbox");
       console.log("against the waiting page's auth_token (see /llms.txt). MCP calls need the");
-      console.log("resulting access token in OUTCOMEPAY_MCP_TOKEN.");
+      console.log("resulting access token in OUTCOMEPAY_MCP_TOKEN. The same token authorizes");
+      console.log("`outcomepay approve` — approvals are recorded as your AgentID identity.");
       return;
     case "mcp": {
       if (sub === "tools") {

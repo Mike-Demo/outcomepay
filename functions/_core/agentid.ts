@@ -3,7 +3,10 @@
  * Credentials come from space env vars AGENTID_CLIENT_ID / AGENTID_CLIENT_SECRET
  * (set via `sf env set`, never committed). Flow: authorization code + PKCE
  * (S256), token exchange with client_secret_basic, identity via userinfo,
- * with best-effort ES256 ID-token verification against the issuer JWKS.
+ * with strict ES256 ID-token verification against the issuer JWKS.
+ * Approvals are identity-bound: identityFromRequest resolves a verified
+ * AgentID identity from a Bearer access token or the browser session
+ * cookie the callback sets after a verified sign-in.
  */
 
 export const AGENTID_ISSUER = "https://auth.agentid.com";
@@ -187,4 +190,147 @@ export async function verifyIdToken(
   } catch (err) {
     return { valid: false, error: (err as Error).message };
   }
+}
+
+/* ---------- Browser sessions + request identity (identity-bound approvals) ---------- */
+
+export const SESSION_COOKIE = "op_session";
+export const SESSION_TTL_MS = 8 * 60 * 60 * 1000;
+
+export interface SessionIdentity {
+  sub: string;
+  email?: string;
+  name?: string;
+  actor_type?: string;
+}
+
+async function hmacKey(secret: string): Promise<CryptoKey> {
+  return crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign", "verify"]
+  );
+}
+
+/** Mint the session cookie value after a verified sign-in. The payload is
+ *  HMAC-SHA256-signed with the AgentID client secret (server-side only). */
+export async function createSessionValue(user: UserInfo, secret: string): Promise<string> {
+  const payload = {
+    sub: user.sub,
+    email: user.email,
+    name: user.name ?? user.preferred_username,
+    actor_type: user.actor_type,
+    exp: Date.now() + SESSION_TTL_MS,
+  };
+  const body = b64urlEncode(new TextEncoder().encode(JSON.stringify(payload)));
+  const key = await hmacKey(secret);
+  const sig = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(body));
+  return `${body}.${b64urlEncode(new Uint8Array(sig))}`;
+}
+
+export async function verifySessionValue(
+  value: string,
+  secret: string
+): Promise<SessionIdentity | null> {
+  try {
+    const [body, sig] = value.split(".");
+    if (!body || !sig) return null;
+    const key = await hmacKey(secret);
+    const ok = await crypto.subtle.verify(
+      "HMAC",
+      key,
+      b64urlDecodeToBytes(sig) as BufferSource,
+      new TextEncoder().encode(body)
+    );
+    if (!ok) return null;
+    const payload = JSON.parse(new TextDecoder().decode(b64urlDecodeToBytes(body))) as {
+      sub?: unknown;
+      exp?: unknown;
+      email?: string;
+      name?: string;
+      actor_type?: string;
+    };
+    if (typeof payload.exp !== "number" || payload.exp < Date.now()) return null;
+    if (typeof payload.sub !== "string" || !payload.sub) return null;
+    return {
+      sub: payload.sub,
+      email: payload.email,
+      name: payload.name,
+      actor_type: payload.actor_type,
+    };
+  } catch {
+    return null;
+  }
+}
+
+export function readCookie(request: Request, name: string): string | null {
+  const header = request.headers.get("Cookie") ?? "";
+  for (const part of header.split(";")) {
+    const idx = part.indexOf("=");
+    if (idx < 0) continue;
+    if (part.slice(0, idx).trim() === name) {
+      try {
+        return decodeURIComponent(part.slice(idx + 1).trim());
+      } catch {
+        return part.slice(idx + 1).trim();
+      }
+    }
+  }
+  return null;
+}
+
+export interface RequestIdentity {
+  /** The value recorded as the approval's approver: agentid:<email|sub>. */
+  approver: string;
+  sub: string;
+  email?: string;
+  name?: string;
+  actor_type?: string;
+  via: "bearer" | "session";
+}
+
+/**
+ * Resolve the caller's verified AgentID identity: an AgentID Bearer access
+ * token (validated at the issuer's userinfo endpoint — agents, MCP, CLI)
+ * or the signed browser session cookie (the Command Center after /auth).
+ * A presented-but-invalid Bearer does NOT fall through to the cookie.
+ */
+export async function identityFromRequest(
+  request: Request,
+  env: Record<string, unknown>,
+  origin: string
+): Promise<RequestIdentity | null> {
+  const cfg = agentIdConfig(env, origin);
+  if (!cfg) return null;
+  const auth = request.headers.get("Authorization") ?? "";
+  const match = /^Bearer\s+(.+)$/i.exec(auth.trim());
+  if (match) {
+    const user = await fetchUserInfo(match[1]).catch(() => null);
+    if (!user) return null;
+    return {
+      approver: `agentid:${user.email ?? user.sub}`,
+      sub: user.sub,
+      email: user.email,
+      name: user.name ?? user.preferred_username,
+      actor_type: user.actor_type,
+      via: "bearer",
+    };
+  }
+  const cookie = readCookie(request, SESSION_COOKIE);
+  if (cookie) {
+    const s = await verifySessionValue(cookie, cfg.clientSecret);
+    if (s) {
+      return {
+        approver: `agentid:${s.email ?? s.sub}`,
+        sub: s.sub,
+        email: s.email,
+        name: s.name,
+        actor_type: s.actor_type,
+        via: "session",
+      };
+    }
+  }
+  return null;
 }

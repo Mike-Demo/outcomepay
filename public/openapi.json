@@ -196,16 +196,13 @@
     },
     "/api/agents/approve": {
       "post": {
-        "description": "Record approval of a freshly verified PASS outcome. Fails with stale_verification when artifacts are newer than the passing verification. The approver defaults to 'human'.",
+        "description": "Record approval of a freshly verified PASS outcome. IDENTITY-BOUND: the caller must present a verified AgentID identity \u2014 an AgentID access token in the Authorization header (agents, MCP, CLI) or the signed browser session cookie set by /auth/callback after a verified sign-in. The recorded approver is derived from that identity (agentid:<email|sub>); caller-supplied approver values are ignored. Settlement refuses to run without this record.",
         "operationId": "approveOutcome",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
                 "properties": {
-                  "approver": {
-                    "type": "string"
-                  },
                   "outcomeId": {
                     "type": "string"
                   }
@@ -239,9 +236,24 @@
               }
             },
             "description": "Input or policy error"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "identity_required \u2014 no verified AgentID identity was presented"
           }
         },
-        "summary": "Record approval of a verified outcome",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "Record approval (identity-bound)",
         "tags": [
           "agents"
         ]

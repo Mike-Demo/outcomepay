@@ -269,3 +269,29 @@ sequential guarantee. The deepest finding — the approval endpoint is
 unauthenticated, so "human approval" is a workflow gate rather than an
 identity guarantee — is Demo's design call; the MCP path already
 attributes approvals to the caller's AgentID identity.
+
+## Approvals bound to AgentID identity (2026-10-13, Demo's decision)
+
+The Copilot validation's top risk — the approval endpoint accepted a
+caller-supplied `approver` string with no authentication — is closed by
+Demo's decision to bind approvals to AgentID identity (v38):
+
+- `POST /api/agents/approve` now requires a verified AgentID identity:
+  an AgentID access token in the Authorization header (validated at the
+  issuer's userinfo endpoint), or the browser session. No identity →
+  401 `identity_required` with the resource-metadata challenge. The
+  recorded approver is derived (`agentid:<email|sub>`), never supplied.
+- A verified sign-in now also mints an 8-hour browser session: an
+  HMAC-SHA256-signed cookie (key = the AgentID client secret, server-side
+  only) set by /auth/callback. `GET /auth/session` reports it; the
+  Command Center swaps the approve button for "Sign in with AgentID to
+  approve" when signed out and shows the approving identity when in.
+- MCP `approve_outcome` forwards the caller's token to the REST endpoint,
+  so the identity is verified end-to-end, not asserted by the tool. The
+  CLI sends OUTCOMEPAY_MCP_TOKEN as the Bearer for approve.
+- Scope kept deliberate: the rest of the pipeline stays public-by-design;
+  the identity-bound approval is the one record settlement cannot
+  proceed without, so the gate's key is now an identity, not a string.
+- Filming note: sign in at /auth once (the issuer grant persists) and
+  the session covers a filming block; approvals on camera record as
+  `agentid:mikedemo.jobsearch@agentmail.to`.

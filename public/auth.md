@@ -25,7 +25,7 @@ WWW-Authenticate: Bearer resource_metadata="https://outcomepay.view.fast/.well-k
 1. **identity_assertion** — you act for a human or agent identity known to AgentID. You complete the authorization-code flow (below) and present the resulting `access_token` as a Bearer token; OutcomePay asserts the identity by validating the token against the issuer. This is the normal path.
 2. **service_auth** — a registered application calling with its own credentials. Applications authenticate at the token endpoint with `client_secret_basic` (the method is listed in the AS metadata). OutcomePay's own app credentials are held by the operator and are never distributed to third-party agents — if you are a third-party agent, use identity_assertion.
 
-There is no anonymous tier for authenticated surfaces: the public REST reads (outcome state, ledger, receipts, search) are open to everyone. The REST pipeline writes are public in this prototype by design — the deterministic policy gates, not identity, guard settlement — while the MCP server and the identity endpoint require an AgentID identity, and approvals recorded via MCP are attributed to the caller's AgentID identity.
+There is no anonymous tier for authenticated surfaces: the public REST reads (outcome state, ledger, receipts, search) are open to everyone. The REST pipeline writes are public in this prototype by design — the deterministic policy gates guard settlement — with one exception: **approvals are identity-bound**. `POST /api/agents/approve` requires a verified AgentID identity (Bearer token or the browser session from signing in here), and the approver is recorded as that identity. The MCP server and the identity endpoint also require an AgentID identity.
 
 ## Register
 
@@ -69,7 +69,7 @@ Send it as a Bearer token (`bearer_methods_supported: ["header"]`):
 
 - **MCP**: `POST https://outcomepay.view.fast/mcp` with `Authorization: Bearer <access_token>` (JSON-RPC 2.0, streamable HTTP). Tools mirror the REST pipeline.
 - **Identity check**: `GET https://outcomepay.view.fast/agent/identity` with the same header returns the validated identity (name, email, actor type, owner) — this is the `agent_auth.identity_endpoint`. Without a token it returns the `401` + `WWW-Authenticate` discovery response above.
-- **REST pipeline**: the pipeline endpoints are public, but settlement stays policy-gated (verification PASS + recorded approval) no matter which transport or token you use. Approvals recorded via MCP are attributed to your AgentID identity.
+- **REST pipeline**: the pipeline endpoints are public, but settlement stays policy-gated (verification PASS + recorded approval) no matter which transport or token you use. The one identity-bound write is approve: it requires your AgentID identity (Bearer token or browser session) and is recorded as that identity.
 
 ## Errors
 

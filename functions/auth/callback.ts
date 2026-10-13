@@ -1,9 +1,12 @@
 import { withErrors } from "../_core/http";
 import {
   agentIdConfig,
+  createSessionValue,
   exchangeCode,
   fetchUserInfo,
   verifyIdToken,
+  SESSION_COOKIE,
+  SESSION_TTL_MS,
   type UserInfo,
 } from "../_core/agentid";
 
@@ -32,7 +35,7 @@ function esc(s: string): string {
   );
 }
 
-function resultPage(title: string, bodyHtml: string, status = 200): Response {
+function resultPage(title: string, bodyHtml: string, status = 200, extraCookies: string[] = []): Response {
   const html = `<!doctype html>
 <html lang="en">
 <head>
@@ -64,6 +67,7 @@ function resultPage(title: string, bodyHtml: string, status = 200): Response {
   const clear = "HttpOnly; Secure; SameSite=Lax; Path=/auth; Max-Age=0";
   headers.append("Set-Cookie", `op_state=; ${clear}`);
   headers.append("Set-Cookie", `op_verifier=; ${clear}`);
+  for (const c of extraCookies) headers.append("Set-Cookie", c);
   return new Response(html, { status, headers });
 }
 
@@ -126,8 +130,15 @@ export const GET = withErrors(async (request: Request, env: Record<string, unkno
   }
   rows.push(["ID token", idCheck]);
   const dl = rows.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("");
+  // Identity-bound approvals: a verified sign-in also mints an 8-hour
+  // signed browser session, so this browser can approve outcomes in the
+  // Command Center as this identity.
+  const session = await createSessionValue(user, cfg.clientSecret);
+  const sessionCookie = `${SESSION_COOKIE}=${encodeURIComponent(session)}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=${Math.floor(SESSION_TTL_MS / 1000)}`;
   return resultPage(
     "Signed in with AgentID",
-    `<p style="color:var(--text)">Welcome — AgentID issued a token for this identity and OutcomePay verified it with the issuer.</p><dl>${dl}</dl><p>Next: call the MCP server (<code>POST /mcp</code>) with your access token as a Bearer token, or drive the pipeline over the <a href="/docs">REST API</a>.</p>`
+    `<p style="color:var(--text)">Welcome — AgentID issued a token for this identity and OutcomePay verified it with the issuer.</p><dl>${dl}</dl><p>This browser now holds an 8-hour session as this identity, so it can approve verified outcomes in the <a href="/">Command Center</a> — approvals are recorded as this AgentID identity. Agents instead call the MCP server (<code>POST /mcp</code>) or the REST API, sending an AgentID access token in the Authorization header.</p>`,
+    200,
+    [sessionCookie]
   );
 });

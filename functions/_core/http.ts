@@ -27,7 +27,12 @@ export function readIdempotencyKey(request: Request): string | null {
 export function storedResponse(stored: { status: number; body: string }): Response {
   return new Response(stored.body, {
     status: stored.status,
-    headers: { "Content-Type": "application/json", "Idempotency-Replayed": "true" },
+    headers: {
+      "Content-Type": "application/json",
+      "Idempotency-Replayed": "true",
+      "RateLimit-Limit": "60",
+      "RateLimit-Policy": "60;w=60",
+    },
   });
 }
 
