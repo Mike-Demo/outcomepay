@@ -98,6 +98,18 @@ export const POST = withErrors(async (request: Request, env: Record<string, unkn
     throw new InputError("paypal_error", `Could not read PayPal order: ${(err as Error).message}`);
   }
   const status = String(order?.status ?? "").toUpperCase();
+  // Bind capture to the persisted settlement amount: the live PayPal order
+  // must be for exactly the server-derived team total (Copilot validation #1).
+  const orderAmount = order?.purchase_units?.[0]?.amount?.value;
+  if (
+    typeof orderAmount === "string" &&
+    Number(orderAmount).toFixed(2) !== Number(settlement.amount_usd).toFixed(2)
+  ) {
+    throw new InputError(
+      "amount_mismatch",
+      `PayPal order amount ${orderAmount} does not match the settlement amount ${settlement.amount_usd}; refusing to capture.`
+    );
+  }
   let authorizationId = settlement.authorization_id;
   if (status === "APPROVED" && !authorizationId) {
     try {

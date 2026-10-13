@@ -164,10 +164,11 @@ export async function verifyIdToken(
     if (header.alg !== "ES256") return { valid: false, error: "unexpected_alg" };
     if (claims.iss !== AGENTID_ISSUER) return { valid: false, error: "bad_issuer" };
     if (claims.aud !== cfg.clientId) return { valid: false, error: "bad_audience" };
-    if (typeof claims.exp === "number" && claims.exp * 1000 < Date.now())
-      return { valid: false, error: "expired" };
+    if (typeof claims.exp !== "number" || claims.exp * 1000 < Date.now())
+      return { valid: false, error: "expired_or_missing_exp" };
     const keys = await getJwks();
-    const jwk = keys.find((k) => k.kid === header.kid) ?? keys[0];
+    // The key must be selected by kid; never fall back to an arbitrary key.
+    const jwk = header.kid ? keys.find((k) => k.kid === header.kid) : undefined;
     if (!jwk) return { valid: false, error: "no_jwk" };
     const key = await crypto.subtle.importKey(
       "jwk",

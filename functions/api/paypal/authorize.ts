@@ -22,8 +22,16 @@ export const POST = withErrors(async (request: Request, env: Record<string, unkn
   if (!orderId) throw new InputError("missing_id", "Body must include orderId.");
 
   // Policy gate: settlement orders authorize only via the policy engine.
+  // Fail closed: without the policy store we cannot prove this order is not
+  // a settlement order, so authorization is refused (Copilot validation #1).
   const gateDb = await getDb(env);
-  if (gateDb) {
+  if (!gateDb) {
+    throw new InputError(
+      "no_database",
+      "Policy gate unavailable (no database configured); refusing to authorize."
+    );
+  }
+  {
     await ensurePolicySchema(gateDb);
     const settlement = await getSettlementByPaypalRef(gateDb, { orderId });
     if (settlement) {

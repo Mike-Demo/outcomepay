@@ -10,8 +10,9 @@ import {
 /**
  * GET /auth/callback — the redirect URI registered with AgentID.
  * Validates the state cookie, exchanges the authorization code
- * (client_secret_basic + PKCE), reads the identity from userinfo,
- * best-effort verifies the ID token, and renders the result.
+ * (client_secret_basic + PKCE), verifies the ID token (fail-closed:
+ * signature, issuer, audience, exp, kid), reads the identity from
+ * userinfo, and renders the result.
  * This is the page the console test sign-in lands on.
  */
 
@@ -93,13 +94,15 @@ export const GET = withErrors(async (request: Request, env: Record<string, unkno
   }
 
   let user: UserInfo | null = null;
-  let idCheck = "not issued";
+  const idCheck = "signature + claims verified (ES256)";
   try {
     const tokens = await exchangeCode(cfg, code, cookies.op_verifier);
-    if (tokens.id_token) {
-      const v = await verifyIdToken(tokens.id_token, cfg);
-      idCheck = v.valid ? "signature + claims verified (ES256)" : `unverified (${v.error ?? "unknown"})`;
-    }
+    // Fail closed: sign-in succeeds only with a valid ID token — signature,
+    // issuer, audience, and a present, unexpired exp, keyed by kid
+    // (Copilot validation #4). Userinfo alone is not sufficient.
+    if (!tokens.id_token) throw new Error("The issuer did not return an ID token.");
+    const v = await verifyIdToken(tokens.id_token, cfg);
+    if (!v.valid) throw new Error(`ID token validation failed (${v.error ?? "unknown"}).`);
     user = await fetchUserInfo(tokens.access_token);
   } catch (err) {
     return resultPage(

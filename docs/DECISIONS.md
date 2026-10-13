@@ -220,3 +220,52 @@ trust model. Shipped in versions v33–v36.
   runs directory). Deliberately unbuilt: webhooks, L5 features,
   Web Bot Auth signatures, and an npm SDK (a publishing decision,
   not a code gap).
+
+## Future adds — external discovery (deferred 2026-10-13, Demo's direction)
+
+OutcomePay is a proof of concept and is deliberately NOT being promoted or
+listed anywhere. The AgentID app stays unlisted ("Get Listed" never
+requested). The following external-discovery items surfaced by the Ora
+audit are recorded as future adds only, to be revisited if the project
+ever goes beyond PoC:
+
+- Brand/search presence for "OutcomePay" (indexing, press, backlinks)
+- npm (or PyPI) package for the CLI/SDK (the CLI ships in-repo today)
+- skills.sh listing for the OutcomePay skill (ships as a local skill)
+- Wikipedia / Wikidata entity
+- ChatGPT app / connector directory listing
+- Agent Plugins manifest (plugin.json) in the repo
+
+Nothing here blocks the hackathon submission: judges receive direct
+links (repo, hosted demo, video) from the Devpost entry.
+
+## GitHub Copilot stack validation + remediation (2026-10-13)
+
+At Demo's direction the whole stack was validated by GitHub Copilot
+(issue #1, PR #2). Verdict: FAIL on all seven dimensions under a strict
+standard. Every load-bearing claim was re-verified against the code by
+Cane before acting — the findings held up. Fixed the same day (v37):
+
+- Legacy PayPal authorize/capture now FAIL CLOSED when no database is
+  configured (`no_database`) instead of skipping the settlement gate.
+- Settle compares the live PayPal order amount against the persisted
+  settlement amount before capture (`amount_mismatch`).
+- AgentID ID-token verification is strict: a numeric, unexpired `exp` is
+  required and the signing key must match by `kid` (no first-key
+  fallback). The callback is fail-closed: no valid ID token, no
+  signed-in page (it previously proceeded on userinfo alone).
+- `PAYPAL_ENVIRONMENT=LIVE` is refused in code (`live_refused`) so the
+  sandbox-only claims are enforced, not just documented.
+- Doc precision: README's "funds held when the team forms" corrected;
+  auth.md's identity wording reconciled with the public-by-design REST
+  pipeline; OpenAPI completed with the four operations it had omitted
+  (`/api/paypal/order`, `/return`, `/cancel`, ledger backfill).
+
+Accepted as documented prototype risks (not fixed): capture-path
+concurrency has no atomic claim (PayPal's duplicate-capture rejection is
+the backstop; noted in code), the hash chain proves tamper-evidence of
+entries, not completeness or provenance, and idempotent replay is a
+sequential guarantee. The deepest finding — the approval endpoint is
+unauthenticated, so "human approval" is a workflow gate rather than an
+identity guarantee — is Demo's design call; the MCP path already
+attributes approvals to the caller's AgentID identity.

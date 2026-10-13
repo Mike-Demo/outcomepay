@@ -36,7 +36,15 @@ export const POST = withErrors(async (request: Request, env: Record<string, unkn
   }
 
   // Policy gate: settlement orders/authorization capture only via the policy engine.
-  if (db) {
+  // Fail closed: without the policy store we cannot prove this authorization
+  // is not a settlement authorization, so capture is refused (Copilot validation #1).
+  if (!db) {
+    throw new InputError(
+      "no_database",
+      "Policy gate unavailable (no database configured); refusing to capture."
+    );
+  }
+  {
     await ensurePolicySchema(db);
     const settlement = await getSettlementByPaypalRef(db, {
       orderId: orderId || undefined,

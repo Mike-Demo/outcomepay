@@ -455,6 +455,56 @@
         ]
       }
     },
+    "/api/agents/ledger/backfill": {
+      "post": {
+        "description": "Rebuilds the hash-chained ledger entries for an outcome from its stored pipeline records (used once to backfill the demo outcome settled before the ledger existed). Operator utility; not part of the normal pipeline.",
+        "operationId": "backfillLedger",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "outcomeId": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "outcomeId"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Structured error"
+          }
+        },
+        "summary": "Backfill an outcome's audit ledger (operator utility)",
+        "tags": [
+          "agents"
+        ]
+      }
+    },
     "/api/agents/ledger/verify": {
       "get": {
         "description": "Recompute every hash link in an outcome's audit chain and report whether it is intact.",
@@ -988,6 +1038,39 @@
         ]
       }
     },
+    "/api/paypal/cancel": {
+      "get": {
+        "deprecated": true,
+        "description": "Browser cancel URL for the standalone PayPal harness: PayPal redirects the buyer here when they cancel approval. Not used by the agent settlement path.",
+        "operationId": "paypalCancel",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Structured error"
+          }
+        },
+        "summary": "PayPal buyer-cancel redirect (legacy harness)",
+        "tags": [
+          "paypal-legacy"
+        ]
+      }
+    },
     "/api/paypal/capture": {
       "post": {
         "deprecated": true,
@@ -1088,6 +1171,82 @@
           }
         },
         "summary": "Create bare PayPal order (legacy)",
+        "tags": [
+          "paypal-legacy"
+        ]
+      }
+    },
+    "/api/paypal/order": {
+      "get": {
+        "deprecated": true,
+        "description": "Returns the current state of a PayPal order known to the standalone harness. Read-only; not part of the agent settlement path.",
+        "operationId": "getPaypalOrder",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Structured error"
+          }
+        },
+        "summary": "Fetch a PayPal order (legacy harness)",
+        "tags": [
+          "paypal-legacy"
+        ]
+      }
+    },
+    "/api/paypal/return": {
+      "get": {
+        "deprecated": true,
+        "description": "Browser return URL for the standalone PayPal harness: PayPal redirects the buyer here after approval; the page reports the order state. Not used by the agent settlement path, whose buyer approval returns to the Command Center.",
+        "operationId": "paypalReturn",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Structured error"
+          }
+        },
+        "summary": "PayPal buyer-return redirect (legacy harness)",
         "tags": [
           "paypal-legacy"
         ]

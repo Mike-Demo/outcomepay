@@ -33,7 +33,7 @@ PayPal AI Hackathon 2026 entry. Solo build by Mike Demopoulos. MIT licensed.
 5. **Human approves** the verified outcome.
 6. **Policy engine** — deterministic code, the *only* path that touches money —
    re-verifies freshness, then authorizes and **captures** the PayPal order
-   (AUTHORIZE intent: funds are held when the team forms, released on proof).
+   (AUTHORIZE intent: the order is created after verification and approval; authorization and capture happen inside settlement, on proof).
 7. Every event is appended to a **SHA-256 hash-chained audit ledger**; anyone
    can re-verify it via a public endpoint or offline script. No blockchain, no
    token — just the hash chain.
@@ -62,7 +62,7 @@ Open http://localhost:3000.
 | Variable | Required | Purpose |
 |---|---|---|
 | `PAYPAL_CLIENT_ID` / `PAYPAL_CLIENT_SECRET` | for live PayPal | PayPal sandbox REST app credentials |
-| `PAYPAL_ENVIRONMENT` | no (default `SANDBOX`) | `SANDBOX` or `LIVE` |
+| `PAYPAL_ENVIRONMENT` | no (default `SANDBOX`) | `SANDBOX` only — `LIVE` is refused in code; OutcomePay is a sandbox-only prototype |
 | `PUBLIC_BASE_URL` | for PayPal redirects | e.g. `https://outcomepay.view.fast` |
 | `LLM_PROVIDER` | no (default `openai`) | `openai` or `anthropic` |
 | `LLM_BASE_URL` | no | any OpenAI-compatible endpoint (e.g. Groq, OpenRouter) |

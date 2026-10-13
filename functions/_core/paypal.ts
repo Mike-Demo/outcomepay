@@ -61,7 +61,16 @@ export function paypalConfig(routeEnv: Record<string, unknown>): PaypalConfig {
     );
   }
   const environment = (envVal(routeEnv, "PAYPAL_ENVIRONMENT") ?? "SANDBOX").toUpperCase();
-  const sandbox = environment !== "LIVE";
+  if (environment === "LIVE") {
+    // OutcomePay is a sandbox-only prototype — every public claim says so.
+    // Refuse live mode outright rather than letting one env var contradict
+    // them (Copilot validation #3).
+    throw new InputError(
+      "live_refused",
+      "OutcomePay is a sandbox-only prototype; PAYPAL_ENVIRONMENT=LIVE is refused."
+    );
+  }
+  const sandbox = true;
   return {
     clientId,
     clientSecret,

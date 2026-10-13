@@ -25,7 +25,7 @@ WWW-Authenticate: Bearer resource_metadata="https://outcomepay.view.fast/.well-k
 1. **identity_assertion** — you act for a human or agent identity known to AgentID. You complete the authorization-code flow (below) and present the resulting `access_token` as a Bearer token; OutcomePay asserts the identity by validating the token against the issuer. This is the normal path.
 2. **service_auth** — a registered application calling with its own credentials. Applications authenticate at the token endpoint with `client_secret_basic` (the method is listed in the AS metadata). OutcomePay's own app credentials are held by the operator and are never distributed to third-party agents — if you are a third-party agent, use identity_assertion.
 
-There is no anonymous tier: the public REST reads (outcome state, ledger, receipts, search) are open to everyone, and everything else needs an identity.
+There is no anonymous tier for authenticated surfaces: the public REST reads (outcome state, ledger, receipts, search) are open to everyone. The REST pipeline writes are public in this prototype by design — the deterministic policy gates, not identity, guard settlement — while the MCP server and the identity endpoint require an AgentID identity, and approvals recorded via MCP are attributed to the caller's AgentID identity.
 
 ## Register
 
