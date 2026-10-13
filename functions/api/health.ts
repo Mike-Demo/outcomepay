@@ -5,7 +5,7 @@ export const GET = withErrors(async () => {
   return json({
     ok: true,
     service: "outcomepay",
-    phase: "0-scaffold",
+    phase: "agent-ready",
     time: new Date().toISOString(),
   });
 });

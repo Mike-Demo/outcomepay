@@ -322,3 +322,14 @@ body {
 .audit-trail h4 { margin: 0 0 8px; font-size: 14px; }
 .audit-trail p { font-size: 13px; }
 .chain-ok { color: #86efac; font-weight: 600; }
+
+/* Docs page */
+.docs section { margin: 28px 0; }
+.docs h2 { font-size: 20px; margin: 0 0 10px; letter-spacing: -0.01em; }
+.docs p, .docs li { line-height: 1.6; font-size: 15px; }
+.docs a { color: var(--accent); }
+.docs code { background: #1d2637; border: 1px solid var(--line); border-radius: 6px; padding: 1px 6px; font-size: 13px; }
+.doctable { width: 100%; border-collapse: collapse; font-size: 14px; }
+.doctable th, .doctable td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.doctable th { color: var(--muted); font-weight: 600; }
+.docpre { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; overflow-x: auto; font-size: 13px; line-height: 1.6; }

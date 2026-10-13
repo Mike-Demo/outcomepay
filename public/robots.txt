@@ -1,0 +1,6 @@
+# OutcomePay — robots.txt
+# Agents are first-class users here. Everything public is crawlable.
+User-agent: *
+Allow: /
+
+Sitemap: https://outcomepay.view.fast/sitemap.xml

@@ -11,6 +11,20 @@ export function apiError(status: number, code: string, message: string): Respons
   return json({ ok: false, error: code, message }, status);
 }
 
+/** Read an Idempotency-Key header (trimmed, length-capped), or null. */
+export function readIdempotencyKey(request: Request): string | null {
+  const key = request.headers.get("Idempotency-Key")?.trim();
+  return key ? key.slice(0, 128) : null;
+}
+
+/** Rebuild a stored response for an idempotent replay. */
+export function storedResponse(stored: { status: number; body: string }): Response {
+  return new Response(stored.body, {
+    status: stored.status,
+    headers: { "Content-Type": "application/json", "Idempotency-Replayed": "true" },
+  });
+}
+
 export class InputError extends Error {
   code: string;
   constructor(code: string, message: string) {

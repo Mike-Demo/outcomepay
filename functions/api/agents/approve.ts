@@ -47,9 +47,13 @@ export const POST = withErrors(async (request: Request, env: Record<string, unkn
       "Artifacts changed after the last verification — re-run verification before approving."
     );
   }
-  const approvalId = await replaceApproval(db, outcomeId, "human");
+  const approver =
+    typeof body?.approver === "string" && body.approver.trim()
+      ? body.approver.trim().slice(0, 120)
+      : "human";
+  const approvalId = await replaceApproval(db, outcomeId, approver);
   await appendLedger(db, outcomeId, "approval.recorded", {
-    approver: "human",
+    approver,
     verification_id: verification.id,
   });
   return json({ ok: true, approvalId, approvedAt: new Date().toISOString(), verificationId: verification.id });

@@ -1,4 +1,4 @@
-import { withErrors, json, apiError, InputError } from "../../_core/http";
+import { withErrors, json, apiError, InputError, readIdempotencyKey, storedResponse } from "../../_core/http";
 import { buildContract } from "../../_core/agents";
 import {
   getDb,
@@ -12,6 +12,9 @@ import {
   getLatestVerification,
   getApproval,
   getSettlementByOutcome,
+  ensureIdempotencySchema,
+  getIdempotentResponse,
+  saveIdempotentResponse,
 } from "../../_core/db";
 import { appendLedger, getLedger } from "../../_core/ledger";
 
@@ -43,6 +46,12 @@ async function createOutcome(request: Request, env: Record<string, unknown>) {
   if (!db) throw new InputError("no_database", "Database not configured on this space.");
   await ensureAgentSchema(db);
   await ensurePolicySchema(db);
+  const idemKey = readIdempotencyKey(request);
+  if (idemKey) {
+    await ensureIdempotencySchema(db);
+    const stored = await getIdempotentResponse(db, idemKey, "POST /api/agents/outcome");
+    if (stored) return storedResponse(stored);
+  }
   const id = await insertOutcome(db, {
     goal: contract.goal,
     budgetUsd: contract.budget.toFixed(2),
@@ -54,7 +63,11 @@ async function createOutcome(request: Request, env: Record<string, unknown>) {
     deliverables: contract.deliverables,
     acceptance_tests: contract.acceptance_tests,
   });
-  return json({ ok: true, outcome: { id, contract, status: "CONTRACTED" } });
+  const payload = { ok: true, outcome: { id, contract, status: "CONTRACTED" } };
+  if (idemKey) {
+    await saveIdempotentResponse(db, idemKey, "POST /api/agents/outcome", 200, JSON.stringify(payload));
+  }
+  return json(payload);
 }
 
 async function getState(request: Request, env: Record<string, unknown>) {

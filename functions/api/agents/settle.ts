@@ -1,4 +1,4 @@
-import { withErrors, json, apiError, InputError } from "../../_core/http";
+import { withErrors, json, apiError, InputError, readIdempotencyKey, storedResponse } from "../../_core/http";
 import {
   paypalConfig,
   getPaypalOrder,
@@ -22,6 +22,9 @@ import {
   updateOutcomeStatus,
   insertOrder,
   updateOrder,
+  ensureIdempotencySchema,
+  getIdempotentResponse,
+  saveIdempotentResponse,
 } from "../../_core/db";
 import { appendLedger } from "../../_core/ledger";
 
@@ -49,6 +52,12 @@ export const POST = withErrors(async (request: Request, env: Record<string, unkn
   if (!db) throw new InputError("no_database", "Database not configured on this space.");
   await ensureAgentSchema(db);
   await ensurePolicySchema(db);
+  const idemKey = readIdempotencyKey(request);
+  if (idemKey) {
+    await ensureIdempotencySchema(db);
+    const stored = await getIdempotentResponse(db, idemKey, "POST /api/agents/settle");
+    if (stored) return storedResponse(stored);
+  }
 
   const row = await getOutcome(db, outcomeId);
   if (!row) throw new InputError("not_found", "Unknown outcome id.");
@@ -143,7 +152,7 @@ export const POST = withErrors(async (request: Request, env: Record<string, unkn
   }
 
   const checks = JSON.parse(verification!.checks_json) as Array<{ id: string; passed: boolean; detail: string }>;
-  return json({
+  const payload = {
     ok: true,
     receipt: {
       outcomeId,
@@ -158,5 +167,9 @@ export const POST = withErrors(async (request: Request, env: Record<string, unkn
       settledAt: new Date().toISOString(),
       ledger: { seq: ledgerEntry.seq, hash: ledgerEntry.hash },
     },
-  });
+  };
+  if (idemKey) {
+    await saveIdempotentResponse(db, idemKey, "POST /api/agents/settle", 200, JSON.stringify(payload));
+  }
+  return json(payload);
 });

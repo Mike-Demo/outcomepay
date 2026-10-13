@@ -537,3 +537,98 @@ export async function getDb(env: Record<string, unknown>): Promise<SpacefastDb |
   await ensureSchema(DB);
   return DB;
 }
+
+/* ---------- Outcome listing / search ---------- */
+
+export interface OutcomeListRow {
+  id: string;
+  goal: string;
+  budget_usd: string;
+  status: string;
+  created_at: number;
+  updated_at: number;
+}
+
+export async function listOutcomes(
+  db: SpacefastDb,
+  opts: { status?: string; q?: string; limit?: number } = {}
+): Promise<OutcomeListRow[]> {
+  const limit = Math.min(Math.max(opts.limit ?? 20, 1), 100);
+  const where: string[] = [];
+  const binds: unknown[] = [];
+  if (opts.status) {
+    where.push(`status = ?`);
+    binds.push(opts.status);
+  }
+  if (opts.q) {
+    where.push(`goal LIKE ?`);
+    binds.push(`%${opts.q.replace(/[%_]/g, "")}%`);
+  }
+  const sql =
+    `SELECT id, goal, budget_usd, status, created_at, updated_at FROM outcomes` +
+    (where.length ? ` WHERE ${where.join(" AND ")}` : ``) +
+    ` ORDER BY created_at DESC LIMIT ${limit}`;
+  const r = await db.prepare(sql).bind(...binds).all();
+  return (r.results ?? []) as unknown as OutcomeListRow[];
+}
+
+/* ---------- Idempotency keys ---------- */
+
+const IDEMPOTENCY_SCHEMA: readonly string[] = [
+  `CREATE TABLE IF NOT EXISTS idempotency_keys (
+    idem_key VARCHAR(128) NOT NULL,
+    endpoint VARCHAR(128) NOT NULL,
+    status INT NOT NULL,
+    response_json MEDIUMTEXT NOT NULL,
+    created_at BIGINT NOT NULL,
+    PRIMARY KEY (idem_key, endpoint)
+  )`,
+];
+
+const IDEMPOTENCY_TTL_MS = 24 * 60 * 60 * 1000;
+
+export async function ensureIdempotencySchema(db: SpacefastDb): Promise<void> {
+  for (const sql of IDEMPOTENCY_SCHEMA) {
+    await db.prepare(sql).bind().run();
+  }
+}
+
+export async function getIdempotentResponse(
+  db: SpacefastDb,
+  key: string,
+  endpoint: string
+): Promise<{ status: number; body: string } | null> {
+  const r = await db
+    .prepare(`SELECT status, response_json, created_at FROM idempotency_keys WHERE idem_key = ? AND endpoint = ? LIMIT 1`)
+    .bind(key, endpoint)
+    .first();
+  if (!r) return null;
+  const row = r as unknown as { status: number; response_json: string; created_at: number };
+  if (Date.now() - Number(row.created_at) > IDEMPOTENCY_TTL_MS) {
+    await db
+      .prepare(`DELETE FROM idempotency_keys WHERE idem_key = ? AND endpoint = ?`)
+      .bind(key, endpoint)
+      .run();
+    return null;
+  }
+  return { status: Number(row.status), body: String(row.response_json) };
+}
+
+export async function saveIdempotentResponse(
+  db: SpacefastDb,
+  key: string,
+  endpoint: string,
+  status: number,
+  body: string
+): Promise<void> {
+  try {
+    await db
+      .prepare(
+        `INSERT INTO idempotency_keys (idem_key, endpoint, status, response_json, created_at) VALUES (?, ?, ?, ?, ?)`
+      )
+      .bind(key, endpoint, status, body, Date.now())
+      .run();
+  } catch {
+    /* a racing twin request already stored it — first writer wins */
+  }
+}
