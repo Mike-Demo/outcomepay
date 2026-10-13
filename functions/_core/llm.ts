@@ -51,9 +51,41 @@ export function llmConfig(routeEnv: Record<string, unknown>): LlmConfig {
   return { provider: provider as LlmProvider, apiKey, model, baseUrl };
 }
 
+const RETRY_DELAYS_MS = [3000, 8000, 15000];
+const REQUEST_TIMEOUT_MS = 60_000;
+
+/**
+ * Fetch with retry on 429/5xx and network errors (Groq's free tier 429s
+ * under burst load). Per-attempt timeout via AbortController so a hung
+ * upstream cannot hang the function indefinitely.
+ */
+async function fetchWithRetry(url: string, init: RequestInit): Promise<Response> {
+  let lastErr: Error | null = null;
+  for (let attempt = 0; attempt <= RETRY_DELAYS_MS.length; attempt++) {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), REQUEST_TIMEOUT_MS);
+    try {
+      const res = await fetch(url, { ...init, signal: ctrl.signal });
+      if ((res.status === 429 || res.status >= 500) && attempt < RETRY_DELAYS_MS.length) {
+        await res.text().catch(() => "");
+        await new Promise((r) => setTimeout(r, RETRY_DELAYS_MS[attempt]));
+        continue;
+      }
+      return res;
+    } catch (err) {
+      lastErr = err as Error;
+      if (attempt >= RETRY_DELAYS_MS.length) throw lastErr;
+      await new Promise((r) => setTimeout(r, RETRY_DELAYS_MS[attempt]));
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+  throw lastErr ?? new Error("fetch failed");
+}
+
 async function llmText(cfg: LlmConfig, system: string, prompt: string): Promise<string> {
   if (cfg.provider === "openai") {
-    const res = await fetch(`${cfg.baseUrl}/chat/completions`, {
+    const res = await fetchWithRetry(`${cfg.baseUrl}/chat/completions`, {
       method: "POST",
       headers: { Authorization: `Bearer ${cfg.apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -71,7 +103,7 @@ async function llmText(cfg: LlmConfig, system: string, prompt: string): Promise<
     if (!text) throw new Error("OpenAI returned no content.");
     return text;
   }
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
+  const res = await fetchWithRetry("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {
       "x-api-key": cfg.apiKey,

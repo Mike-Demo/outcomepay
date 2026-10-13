@@ -460,6 +460,11 @@ export async function getApproval(db: SpacefastDb, outcomeId: string): Promise<A
   return (r as unknown as ApprovalRow) ?? null;
 }
 
+/** Remove any recorded approval (e.g. artifacts changed after approval). */
+export async function deleteApproval(db: SpacefastDb, outcomeId: string): Promise<void> {
+  await db.prepare(`DELETE FROM approvals WHERE outcome_id = ?`).bind(outcomeId).run();
+}
+
 export async function insertSettlement(
   db: SpacefastDb,
   outcomeId: string,
@@ -485,6 +490,28 @@ export async function getSettlementByOutcome(db: SpacefastDb, outcomeId: string)
     .bind(outcomeId)
     .first();
   return (r as unknown as SettlementRow) ?? null;
+}
+
+/** Look up a settlement by its PayPal order id or authorization id (policy gate). */
+export async function getSettlementByPaypalRef(
+  db: SpacefastDb,
+  ref: { orderId?: string; authorizationId?: string }
+): Promise<SettlementRow | null> {
+  if (ref.orderId) {
+    const r = await db
+      .prepare(`SELECT * FROM settlements WHERE paypal_order_id = ? LIMIT 1`)
+      .bind(ref.orderId)
+      .first();
+    if (r) return r as unknown as SettlementRow;
+  }
+  if (ref.authorizationId) {
+    const r = await db
+      .prepare(`SELECT * FROM settlements WHERE authorization_id = ? LIMIT 1`)
+      .bind(ref.authorizationId)
+      .first();
+    if (r) return r as unknown as SettlementRow;
+  }
+  return null;
 }
 
 export async function updateSettlementCapture(

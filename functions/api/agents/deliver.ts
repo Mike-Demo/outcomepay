@@ -11,6 +11,8 @@ import {
   getArtifactsByOutcome,
   replaceArtifacts,
   updateOutcomeStatus,
+  getApproval,
+  deleteApproval,
 } from "../../_core/db";
 import { appendLedger } from "../../_core/ledger";
 
@@ -42,6 +44,9 @@ export const POST = withErrors(async (request: Request, env: Record<string, unkn
   await ensurePolicySchema(db);
   const row = await getOutcome(db, outcomeId);
   if (!row) throw new InputError("not_found", "Unknown outcome id.");
+  if (row.status === "SETTLED") {
+    throw new InputError("already_settled", "This outcome is settled — its evidence record is sealed.");
+  }
   const contract = JSON.parse(row.contract_json) as OutcomeContract;
 
   const team = await getTeamByOutcome(db, outcomeId);
@@ -80,6 +85,16 @@ export const POST = withErrors(async (request: Request, env: Record<string, unkn
     providerId,
     artifacts.map((a) => ({ kind: a.kind, title: a.title, content: a.content, mode: a.mode }))
   );
+  // New evidence invalidates any recorded approval: the human approved the
+  // previous artifacts, not these. They must re-verify and re-approve.
+  const priorApproval = await getApproval(db, outcomeId);
+  if (priorApproval) {
+    await deleteApproval(db, outcomeId);
+    await appendLedger(db, outcomeId, "approval.invalidated", {
+      reason: "artifacts_changed",
+      provider_id: providerId,
+    });
+  }
   await appendLedger(db, outcomeId, "artifact.delivered", {
     provider_id: providerId,
     mode: artifacts[0].mode,

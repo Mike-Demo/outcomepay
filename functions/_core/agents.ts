@@ -68,6 +68,18 @@ tidyledger
 \`\`\`
 `;
 
+/**
+ * What a reviewer may see: the delivery artifacts only — never another
+ * reviewer's report (evaluator independence) — trimmed to keep prompts
+ * inside free-tier token limits.
+ */
+function reviewableArtifacts(prior: Artifact[]): string {
+  return prior
+    .filter((a) => a.kind !== "quality_report")
+    .map((a) => `### ${a.title}\n${a.content.slice(0, 2500)}`)
+    .join("\n\n");
+}
+
 export const PROVIDERS: ProviderDef[] = [
   {
     id: "localizer-01",
@@ -159,7 +171,7 @@ export const PROVIDERS: ProviderDef[] = [
       const data = await llmJson(
         cfg,
         "You are an independent localization QA reviewer. Be strict but fair.",
-        `Review these Spanish (es-US) launch-kit artifacts for TidyLedger against: no_untranslated_strings, required_sections_present. Return JSON {"score": 0-100, "passed": boolean, "findings": ["..."], "report_md": "short markdown report"}. Score below 80 fails.\n\nArtifacts:\n${prior.map((a) => `### ${a.title}\n${a.content.slice(0, 5000)}`).join("\n\n")}`
+        `Review these Spanish (es-US) launch-kit artifacts for TidyLedger against: no_untranslated_strings, required_sections_present. Return JSON {"score": 0-100, "passed": boolean, "findings": ["..."], "report_md": "short markdown report"}. Score below 80 fails.\n\nArtifacts:\n${reviewableArtifacts(prior)}`
       );
       return [
         {
@@ -185,7 +197,7 @@ export const PROVIDERS: ProviderDef[] = [
       const data = await llmJson(
         cfg,
         "You are an independent launch-readiness reviewer focused on cultural fit for US Spanish speakers.",
-        `Review these Spanish (es-US) launch-kit artifacts for TidyLedger for cultural appropriateness, naturalness, and launch readiness. Return JSON {"score": 0-100, "passed": boolean, "findings": ["..."], "report_md": "short markdown report"}. Score below 80 fails.\n\nArtifacts:\n${prior.map((a) => `### ${a.title}\n${a.content.slice(0, 5000)}`).join("\n\n")}`
+        `Review these Spanish (es-US) launch-kit artifacts for TidyLedger for cultural appropriateness, naturalness, and launch readiness. Return JSON {"score": 0-100, "passed": boolean, "findings": ["..."], "report_md": "short markdown report"}. Score below 80 fails.\n\nArtifacts:\n${reviewableArtifacts(prior)}`
       );
       return [
         {
@@ -258,9 +270,12 @@ const TESTS_FOR: Record<string, string[]> = {
 export function buildContract(goal: string, budgetUsd?: number): OutcomeContract {
   const text = goal.toLowerCase();
   let budget = budgetUsd && budgetUsd > 0 ? budgetUsd : 40;
-  if ((!budgetUsd || budgetUsd <= 0) && /\$\s?(\d+(?:\.\d{1,2})?)|budget\D{0,12}(\d+(?:\.\d{1,2})?)|under\D{0,12}(\d+(?:\.\d{1,2})?)/.test(text)) {
-    const m = text.match(/\$?\s?(\d+(?:\.\d{1,2})?)/);
-    if (m) budget = Number(m[1]);
+  if (!budgetUsd || budgetUsd <= 0) {
+    // Take the number anchored to the $ / "budget" / "under" cue — not the
+    // first number anywhere in the text (years, counts, etc.).
+    const m = text.match(/\$\s?(\d+(?:\.\d{1,2})?)|budget\D{0,12}?(\d+(?:\.\d{1,2})?)|under\D{0,12}?(\d+(?:\.\d{1,2})?)/);
+    const found = m?.[1] ?? m?.[2] ?? m?.[3];
+    if (found) budget = Number(found);
   }
 
   const deliverables: string[] = [];

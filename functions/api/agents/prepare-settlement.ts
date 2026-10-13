@@ -50,7 +50,10 @@ export const POST = withErrors(async (request: Request, env: Record<string, unkn
     throw new InputError("not_approved", "Human approval is required before creating the settlement order.");
   }
   const existing = await getSettlementByOutcome(db, outcomeId);
-  if (existing && !existing.capture_id) {
+  if (existing?.capture_id) {
+    throw new InputError("already_settled", "This outcome is already settled.");
+  }
+  if (existing) {
     throw new InputError("already_prepared", "A settlement order already exists for this outcome.");
   }
 

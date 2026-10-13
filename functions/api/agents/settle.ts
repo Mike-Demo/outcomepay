@@ -100,6 +100,10 @@ export const POST = withErrors(async (request: Request, env: Record<string, unkn
   } else if (status !== "AUTHORIZED" && status !== "APPROVED") {
     throw new InputError("not_authorized", `PayPal order is ${status} — buyer approval required before settlement.`);
   }
+  // Re-check just before capture (narrows the check-then-capture race;
+  // PayPal's own rejection of a second capture is the hard backstop).
+  const freshSettlement = await getSettlementByOutcome(db, outcomeId);
+  if (freshSettlement?.capture_id) throw new InputError("already_settled", "This outcome is already settled.");
   let captured;
   try {
     captured = await capturePaypalOrder(env, settlement.paypal_order_id);

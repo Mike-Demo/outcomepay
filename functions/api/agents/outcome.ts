@@ -34,6 +34,9 @@ async function createOutcome(request: Request, env: Record<string, unknown>) {
   if (budgetUsd !== undefined && !(budgetUsd > 0)) {
     throw new InputError("bad_budget", "budgetUsd must be a positive number.");
   }
+  if (budgetUsd !== undefined && budgetUsd > 10000) {
+    throw new InputError("bad_budget", "budgetUsd must be $10,000 or less for this sandbox prototype.");
+  }
 
   const contract = buildContract(goal, budgetUsd);
   const db = await getDb(env);

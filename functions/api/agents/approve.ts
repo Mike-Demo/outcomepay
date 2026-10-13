@@ -5,6 +5,7 @@ import {
   ensurePolicySchema,
   getOutcome,
   getLatestVerification,
+  getArtifactsByOutcome,
   replaceApproval,
 } from "../../_core/db";
 import { appendLedger } from "../../_core/ledger";
@@ -36,7 +37,16 @@ export const POST = withErrors(async (request: Request, env: Record<string, unkn
   if (!verification || verification.overall !== "PASS") {
     throw new InputError("not_verified", "Run verification first — only a PASS outcome can be approved.");
   }
-  // Freshness: approval must follow the latest verification, not an older one.
+  // Freshness: the PASS must be newer than every artifact, so the human
+  // approves the evidence as it currently stands — not an older delivery.
+  const artifacts = await getArtifactsByOutcome(db, outcomeId);
+  const newestArtifact = Math.max(...artifacts.map((a) => a.created_at), 0);
+  if (verification.created_at < newestArtifact) {
+    throw new InputError(
+      "stale_verification",
+      "Artifacts changed after the last verification — re-run verification before approving."
+    );
+  }
   const approvalId = await replaceApproval(db, outcomeId, "human");
   await appendLedger(db, outcomeId, "approval.recorded", {
     approver: "human",

@@ -1,6 +1,6 @@
 import { withErrors, json, apiError, InputError } from "../../_core/http";
 import { paypalConfig, capturePaypalAuthorization } from "../../_core/paypal";
-import { getDb, getOrderByPaypalId, updateOrder } from "../../_core/db";
+import { getDb, getOrderByPaypalId, updateOrder, getSettlementByPaypalRef, ensurePolicySchema } from "../../_core/db";
 
 /**
  * POST /api/paypal/capture — capture the authorization (release the money).
@@ -8,9 +8,11 @@ import { getDb, getOrderByPaypalId, updateOrder } from "../../_core/db";
  * The authorizationId may come from the DB row or be passed explicitly
  * (the UI carries it when no database binding is available).
  *
- * NOTE (Phase 3): this endpoint will be gated behind the deterministic policy
- * engine + human approval. Phase 1 exposes it directly for the exit-gate
- * click-through test only.
+ * POLICY GATE (Phase 3+): orders that belong to an agent settlement are
+ * refused here — settlement captures happen only through the policy engine
+ * (POST /api/agents/settle), which re-verifies evidence and requires a
+ * recorded human approval first. This route serves standalone harness
+ * orders only.
  */
 export const POST = withErrors(async (request: Request, env: Record<string, unknown>) => {
   if (request.method !== "POST") return apiError(405, "method_not_allowed", "Use POST.");
@@ -31,6 +33,21 @@ export const POST = withErrors(async (request: Request, env: Record<string, unkn
   }
   if (!authorizationId) {
     throw new InputError("not_authorized", "Authorize this order before capturing (authorizationId required).");
+  }
+
+  // Policy gate: settlement orders/authorization capture only via the policy engine.
+  if (db) {
+    await ensurePolicySchema(db);
+    const settlement = await getSettlementByPaypalRef(db, {
+      orderId: orderId || undefined,
+      authorizationId,
+    });
+    if (settlement) {
+      throw new InputError(
+        "policy_gated",
+        "This order belongs to an agent settlement. Capture is policy-gated: use POST /api/agents/settle."
+      );
+    }
   }
 
   const cfg = paypalConfig(env);
