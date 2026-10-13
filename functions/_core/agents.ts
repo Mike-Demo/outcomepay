@@ -76,7 +76,10 @@ tidyledger
 function reviewableArtifacts(prior: Artifact[]): string {
   return prior
     .filter((a) => a.kind !== "quality_report")
-    .map((a) => `### ${a.title}\n${a.content.slice(0, 2500)}`)
+    // Per-kind limits: a truncated landing page reads as "incomplete markup"
+    // to a reviewer, so the page gets room for its full document; the rest
+    // are trimmed to keep the prompt inside free-tier token limits.
+    .map((a) => `### ${a.title}\n${a.content.slice(0, a.kind === "landing_page" ? 6000 : 3500)}`)
     .join("\n\n");
 }
 
@@ -147,7 +150,7 @@ export const PROVIDERS: ProviderDef[] = [
       const data = await llmJson(
         cfg,
         "You are a developer-relations researcher. Be practical and specific, no hype.",
-        `Write a concise market brief (markdown) for launching TidyLedger — a tiny fictional CLI budgeting tool for developers — to Spanish-speaking developer communities in the US and Latin America. Return JSON {"brief_md": "..."}. Cover: 3-5 communities or channels with why each fits, localization pitfalls for dev tools in Spanish, and a 2-week launch checklist. Under 600 words.${
+        `Write a concise market brief (markdown, written in Spanish es-US) for launching TidyLedger — a tiny fictional CLI budgeting tool for developers — to Spanish-speaking developer communities in the US and Latin America. Return JSON {"brief_md": "..."}. Cover: 3-5 communities or channels with why each fits, localization pitfalls for dev tools in Spanish, and a 2-week launch checklist. Under 600 words.${
           feedback
             ? `\n\nREVIEWER FEEDBACK ON YOUR PREVIOUS ATTEMPT — fix every issue listed:\n${feedback}`
             : ""
