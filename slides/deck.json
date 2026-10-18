@@ -1,0 +1,224 @@
+{
+  "boltSlidesVersion": 1,
+  "boltSlidesId": "11011050-f9d6-4d43-8a9e-3e43af51bbaf",
+  "deck": {
+    "title": "OutcomePay",
+    "transition": "fade",
+    "font": "space",
+    "accent": "#1688fc"
+  },
+  "slides": [
+    {
+      "id": "s1",
+      "position": 0,
+      "layout": "cover",
+      "props": {
+        "kicker": "Agent-to-agent commerce · PayPal AI Hackathon",
+        "title": "OutcomePay",
+        "subtitle": "Agents don't buy ==promises==. They buy ==verified outcomes==.",
+        "foot": "github.com/Mike-Demo/outcomepay · outcomepay.view.fast"
+      },
+      "background": { "type": "color", "color": "var(--bg)" },
+      "animation": "cascade",
+      "transition": null,
+      "nav": null,
+      "notes": "Hook: AI agents already hire each other for work, but payment is still a leap of faith. OutcomePay makes money move only when the result is proven.",
+      "status": "none"
+    },
+    {
+      "id": "s2",
+      "position": 1,
+      "layout": "contrast",
+      "props": {
+        "kicker": "The problem",
+        "title": "Agents can hire work. ==Payment still runs on trust.==",
+        "left": {
+          "label": "Today",
+          "title": "Promises",
+          "points": [
+            "An agent hires another agent to do work",
+            "Payment releases on trust, not proof",
+            "No way to check the result is real",
+            "Disputes leave no evidence trail"
+          ]
+        },
+        "right": {
+          "label": "With OutcomePay",
+          "title": "Verified outcomes",
+          "points": [
+            "Work is bound to an outcome contract",
+            "Independent verifier agents check the evidence",
+            "Payment settles only after verification",
+            "Every step lands on an audit ledger"
+          ]
+        }
+      },
+      "background": { "type": "color", "color": "var(--bg)" },
+      "animation": "cascade",
+      "transition": null,
+      "nav": null,
+      "notes": "The gap is not capability — agents transact fine. The gap is settlement: nothing proves the deliverable is real before funds move.",
+      "status": "none"
+    },
+    {
+      "id": "s3",
+      "position": 2,
+      "layout": "steps",
+      "props": {
+        "kicker": "How it works",
+        "title": "Buy. Verify. ==Settle.==",
+        "items": [
+          {
+            "title": "Publish an outcome contract",
+            "body": "A buyer agent defines the result, budget, and the evidence that proves it."
+          },
+          {
+            "title": "Providers bid and deliver",
+            "body": "Provider agents compete for the contract, then submit their work."
+          },
+          {
+            "title": "Verifiers check the evidence",
+            "body": "Independent verifier agents confirm the delivery matches the contract."
+          },
+          {
+            "title": "PayPal settles the payment",
+            "body": "Only after verification does money move — no trust required."
+          }
+        ]
+      },
+      "background": { "type": "color", "color": "var(--bg)" },
+      "animation": "cascade",
+      "transition": null,
+      "nav": null,
+      "notes": "Walk the loop left to right. Emphasize step 4: PayPal settlement is gated on verification, which is the whole product.",
+      "status": "none"
+    },
+    {
+      "id": "s4",
+      "position": 3,
+      "layout": "pillars",
+      "props": {
+        "title": "A trust layer ==anyone can audit.==",
+        "items": [
+          {
+            "title": "Hash-chained ledger",
+            "body": "Every event is chained with SHA-256 — alter one link and the chain visibly breaks."
+          },
+          {
+            "title": "Open verification",
+            "body": "Recompute the hashes yourself and confirm the history was never touched."
+          },
+          {
+            "title": "AgentID identity",
+            "body": "OIDC sign-in for agents binds every approval to a verified identity."
+          }
+        ]
+      },
+      "background": { "type": "color", "color": "var(--bg)" },
+      "animation": "cascade",
+      "transition": null,
+      "nav": null,
+      "notes": "Two halves of trust: an immutable record (SHA-256 chain) and knowing who acted (AgentID via OIDC). Neither depends on trusting us.",
+      "status": "none"
+    },
+    {
+      "id": "s5",
+      "position": 4,
+      "layout": "code",
+      "props": {
+        "kicker": "Agent-native access",
+        "title": "Built for agents, ==not humans clicking.==",
+        "filename": "agent-session.sh",
+        "code": "$ outcomepay contracts publish \\\n    --outcome \"Deploy v2.1 to staging\" \\\n    --budget 250.00 --currency USD \\\n    --idempotency-key op_9f3a2c\n\n✓ Contract published · 3 provider bids received\n✓ Evidence verified by 2 independent agents\n✓ PayPal settlement released — $250.00",
+        "highlight": "PayPal settlement released"
+      },
+      "background": { "type": "color", "color": "var(--bg)" },
+      "animation": "cascade",
+      "transition": null,
+      "nav": null,
+      "notes": "Same loop, three surfaces: an MCP server with 13 tools, this CLI, and idempotency keys so an agent that retries never pays twice.",
+      "status": "none"
+    },
+    {
+      "id": "s6",
+      "position": 5,
+      "layout": "bento",
+      "props": {
+        "kicker": "Key features",
+        "title": "Everything an agent transaction needs.",
+        "tiles": [
+          {
+            "k": "01",
+            "title": "MCP server · 13 tools",
+            "body": "Agents plug in through the Model Context Protocol and drive the whole flow."
+          },
+          {
+            "k": "02",
+            "title": "Outcome contracts",
+            "body": "Buyers specify the result and its evidence up front — never the effort."
+          },
+          {
+            "k": "03",
+            "title": "Verifier agents",
+            "body": "Independent checks on every delivery before money moves."
+          },
+          {
+            "k": "04",
+            "title": "PayPal settlement",
+            "body": "Funds release automatically once verification passes."
+          },
+          {
+            "k": "05",
+            "title": "Idempotency keys",
+            "body": "Agents retry safely — no duplicate contracts, no double payments."
+          },
+          {
+            "k": "06",
+            "title": "CLI for humans",
+            "body": "Debug, inspect, and settle from a terminal when you want to watch."
+          }
+        ]
+      },
+      "background": { "type": "color", "color": "var(--bg)" },
+      "animation": "cascade",
+      "transition": null,
+      "nav": null,
+      "notes": "Don't read every tile. Call out MCP (13 tools) and idempotency keys as the two things agent developers ask about first.",
+      "status": "none"
+    },
+    {
+      "id": "s7",
+      "position": 6,
+      "layout": "bigNumber",
+      "props": {
+        "kicker": "Status",
+        "value": "Nov 12",
+        "caption": "Submissions close for the PayPal AI Hackathon — and the core buy-verify-settle loop is already live.",
+        "foot": "Built for the PayPal AI Hackathon · 2026"
+      },
+      "background": { "type": "color", "color": "var(--bg)" },
+      "animation": "cascade",
+      "transition": null,
+      "nav": null,
+      "notes": "This is not a concept: the core loop runs today. The deadline is the forcing function — Nov 12, 2026.",
+      "status": "none"
+    },
+    {
+      "id": "s8",
+      "position": 7,
+      "layout": "cover",
+      "props": {
+        "kicker": "Get involved",
+        "title": "Settle your first ==verified outcome==.",
+        "subtitle": "Star the repo, run the MCP server, and put an agent on the payroll.",
+        "foot": "github.com/Mike-Demo/outcomepay · outcomepay.view.fast"
+      },
+      "background": { "type": "color", "color": "var(--bg)" },
+      "animation": "cascade",
+      "transition": null,
+      "nav": null,
+      "notes": "Close with the ask: try the live site, read the code, and reach out if you want to build a verifier or a provider on top.",
+      "status": "none"
+    }
+  ]
+}
